@@ -4,6 +4,7 @@ import logging
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
 import uvicorn
 import cv2
 import numpy as np
@@ -19,7 +20,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="AI Fitness Form Analyzer API")
+app = FastAPI(title="MotionRank AI — Fitness Form Analyzer API")
 
 # ─── CORS ────────────────────────────────────────────────────────────────────
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
@@ -47,7 +48,7 @@ cloudinary.config(
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
-from analyzer import PushUpAnalyzer, SquatAnalyzer
+from analyzer import PushUpAnalyzer, SquatAnalyzer, CrunchAnalyzer
 
 # Store active analyzers per-session (simple in-memory, fine for free tier)
 analyzers = {}
@@ -55,14 +56,24 @@ analyzers = {}
 # ─── Request / Response Models ───────────────────────────────────────────────
 class AnalyzeRequest(BaseModel):
     frame: str  # base64 encoded JPEG image
-    exercise_type: str = "pushup"  # "pushup" or "squat"
+    exercise_type: str = "pushup"  # "pushup", "squat", or "crunch"
     session_id: str = "default"
+
+class ConnectionPoint(BaseModel):
+    x: float
+    y: float
+
+class SkeletonConnection(BaseModel):
+    start: ConnectionPoint
+    end: ConnectionPoint
 
 class AnalyzeResponse(BaseModel):
     status: str
     reps: int
     feedback: str
     stage: str
+    form_quality: str = "good"  # "good" or "bad"
+    connections: List[Dict[str, Any]] = []  # skeleton lines for overlay
 
 class UploadResponse(BaseModel):
     url: str
@@ -72,7 +83,7 @@ class UploadResponse(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"status": "ok", "message": "AI Fitness Form Analyzer Backend is running."}
+    return {"status": "ok", "message": "MotionRank AI Backend is running."}
 
 @app.get("/health")
 def health_check():
@@ -83,9 +94,8 @@ def health_check():
 async def analyze_frame(req: AnalyzeRequest):
     """
     REST endpoint for frame-by-frame exercise analysis.
-    Accepts a base64-encoded JPEG frame, returns rep count and feedback.
-    This is the primary endpoint since Render free tier doesn't support
-    long-lived WebSocket connections reliably.
+    Accepts a base64-encoded JPEG frame, returns rep count, feedback,
+    form quality (good/bad), and skeleton connection data for overlay drawing.
     """
     try:
         # Get or create analyzer for this session
@@ -93,9 +103,11 @@ async def analyze_frame(req: AnalyzeRequest):
         if session_key not in analyzers:
             if req.exercise_type == "squat":
                 analyzers[session_key] = SquatAnalyzer()
+            elif req.exercise_type == "crunch":
+                analyzers[session_key] = CrunchAnalyzer()
             else:
                 analyzers[session_key] = PushUpAnalyzer()
-        
+
         analyzer = analyzers[session_key]
 
         # Decode base64 frame
@@ -108,7 +120,9 @@ async def analyze_frame(req: AnalyzeRequest):
                 status="error",
                 reps=analyzer.counter,
                 feedback="Could not decode frame.",
-                stage=analyzer.stage
+                stage=analyzer.stage,
+                form_quality="bad",
+                connections=[]
             )
 
         # Process with MediaPipe
@@ -116,17 +130,23 @@ async def analyze_frame(req: AnalyzeRequest):
         results = pose.process(rgb_frame)
 
         if results.pose_landmarks:
-            rep_count, feedback, stage = analyzer.analyze(results.pose_landmarks.landmark)
+            rep_count, feedback, stage, form_quality, connections = analyzer.analyze(
+                results.pose_landmarks.landmark
+            )
         else:
             rep_count = analyzer.counter
             feedback = "No person detected. Make sure your full body is visible."
             stage = analyzer.stage
+            form_quality = "bad"
+            connections = []
 
         return AnalyzeResponse(
             status="processing",
             reps=rep_count,
             feedback=feedback,
-            stage=stage
+            stage=stage,
+            form_quality=form_quality,
+            connections=connections
         )
 
     except Exception as e:
@@ -144,17 +164,17 @@ async def reset_session(session_id: str = "default", exercise_type: str = "pushu
 @app.post("/api/upload-profile-pic", response_model=UploadResponse)
 async def upload_profile_pic(file: UploadFile = File(...)):
     """
-    Upload a profile picture to Cloudinary (free tier: 25 credits/month).
+    Upload a profile picture to Cloudinary.
     Accepts an image file, returns the Cloudinary URL.
     """
     try:
         # Validate file type
         if not file.content_type or not file.content_type.startswith("image/"):
             raise HTTPException(status_code=400, detail="File must be an image.")
-        
+
         # Read file contents
         contents = await file.read()
-        
+
         # Upload to Cloudinary with transformations for profile pics
         result = cloudinary.uploader.upload(
             contents,
@@ -183,26 +203,32 @@ async def upload_profile_pic(file: UploadFile = File(...)):
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     analyzer = PushUpAnalyzer()
-    
+
     try:
         while True:
             data = await websocket.receive_bytes()
             nparr = np.frombuffer(data, np.uint8)
             frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            
+
             rep_count = analyzer.counter
             feedback = analyzer.feedback
-            
+
             if results.pose_landmarks:
-                rep_count, feedback, stage = analyzer.analyze(results.pose_landmarks.landmark)
+                rep_count, feedback, stage, form_quality, connections = analyzer.analyze(
+                    results.pose_landmarks.landmark
+                )
             else:
                 feedback = "No person detected in frame."
-            
+                form_quality = "bad"
+                connections = []
+
             await websocket.send_json({
                 "status": "processing",
                 "reps": rep_count,
-                "feedback": feedback
+                "feedback": feedback,
+                "form_quality": form_quality,
+                "connections": connections
             })
     except WebSocketDisconnect:
         logger.info("Client disconnected from WebSocket")

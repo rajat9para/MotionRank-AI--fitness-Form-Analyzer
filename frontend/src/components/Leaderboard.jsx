@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { getLeaderboard } from '../db';
-import { ArrowLeft, Trophy, Medal, Flame, Crown, Activity } from 'lucide-react';
+import { Trophy, Flame, Crown, Activity, Medal, Star } from 'lucide-react';
+import Navbar from './Navbar';
 
 export default function Leaderboard() {
   const navigate = useNavigate();
@@ -11,135 +12,168 @@ export default function Leaderboard() {
   const [currentUserId, setCurrentUserId] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-      if (!firebaseUser) {
-        navigate('/');
-        return;
-      }
-      setCurrentUserId(firebaseUser.uid);
-
-      try {
-        const data = await getLeaderboard();
-        setLeaders(data);
-      } catch (err) {
-        console.error("Error loading leaderboard:", err);
-      } finally {
-        setLoading(false);
-      }
+    const unsub = auth.onAuthStateChanged(async (u) => {
+      if (!u) { navigate('/'); return; }
+      setCurrentUserId(u.uid);
+      try { setLeaders(await getLeaderboard()); }
+      catch (e) { console.error(e); }
+      finally { setLoading(false); }
     });
-
-    return () => unsubscribe();
+    return () => unsub();
   }, [navigate]);
 
-  const getRankIcon = (rank) => {
-    if (rank === 1) return <Crown size={22} className="text-yellow-400" />;
-    if (rank === 2) return <Medal size={22} className="text-gray-300" />;
-    if (rank === 3) return <Medal size={22} className="text-amber-600" />;
-    return <span className="text-gray-500 font-bold text-lg w-[22px] text-center">{rank}</span>;
+  const podiumColors = { 1: '#FDCB6E', 2: '#B2BEC3', 3: '#CD7F32' };
+  const podiumHeights = { 1: 150, 2: 115, 3: 90 };
+
+  const getRankBadge = (rank) => {
+    if (rank === 1) return <Crown size={20} color="#FDCB6E" />;
+    if (rank === 2) return <Medal size={18} color="#B2BEC3" />;
+    if (rank === 3) return <Medal size={18} color="#CD7F32" />;
+    return <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-muted)', minWidth: 20, textAlign: 'center', display: 'inline-block' }}>{rank}</span>;
   };
 
-  const getRankBg = (rank) => {
-    if (rank === 1) return 'bg-gradient-to-r from-yellow-500/20 to-transparent border-yellow-500/30';
-    if (rank === 2) return 'bg-gradient-to-r from-gray-400/15 to-transparent border-gray-400/20';
-    if (rank === 3) return 'bg-gradient-to-r from-amber-700/20 to-transparent border-amber-700/30';
-    return 'bg-white/5 border-white/5';
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#121212] text-white flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div>
+  if (loading) return (
+    <div className="page-wrapper">
+      <Navbar />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '70vh' }}>
+        <div className="loading-spinner" />
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white font-sans">
-      {/* Background Glows */}
-      <div className="fixed top-0 right-1/4 w-[500px] h-[500px] bg-[#FF007F]/10 rounded-full blur-[150px] pointer-events-none"></div>
-      <div className="fixed bottom-0 left-1/4 w-[500px] h-[500px] bg-[#00E5FF]/10 rounded-full blur-[150px] pointer-events-none"></div>
+    <div className="page-wrapper">
+      <Navbar />
+      <div className="bg-blob" style={{ top: '-50px', right: '20%',  width: 450, height: 450, background: '#FDCB6E', opacity: 0.1 }} />
+      <div className="bg-blob" style={{ bottom: '10%', left: '5%',   width: 350, height: 350, background: '#6C5CE7', opacity: 0.08, animationDelay: '-8s' }} />
 
-      <div className="relative max-w-3xl mx-auto p-8">
+      <div className="main-content" style={{ maxWidth: 760 }}>
+
         {/* Header */}
-        <div className="flex items-center gap-4 mb-10">
-          <Link to="/dashboard" className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors" id="leaderboard-back">
-            <ArrowLeft size={20} />
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <Trophy className="text-yellow-400" size={28} />
-              Global Leaderboard
-            </h1>
-            <p className="text-gray-400 mt-1">Top athletes ranked by total correct reps</p>
+        <div className="animate-slide-down" style={{ marginBottom: 36, textAlign: 'center' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg, #FDCB6E30, #FDCB6E10)', border: '1px solid #FDCB6E40', marginBottom: 16 }}>
+            <Trophy size={28} color="#FDCB6E" />
           </div>
+          <h1 style={{ fontSize: 34, fontWeight: 900, fontFamily: "'Outfit', sans-serif", marginBottom: 6 }}>Global Leaderboard</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: 15 }}>Top athletes ranked by total correct reps</p>
         </div>
 
-        {/* Leaderboard List */}
-        {leaders.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {leaders.map((leader, idx) => {
-              const rank = idx + 1;
-              const isCurrentUser = leader.id === currentUserId;
-
-              return (
-                <div 
-                  key={leader.id}
-                  className={`flex items-center gap-4 p-4 rounded-2xl border backdrop-blur-md transition-all hover:scale-[1.01] ${getRankBg(rank)} ${isCurrentUser ? 'ring-2 ring-[#00E5FF]/50' : ''}`}
-                >
-                  {/* Rank */}
-                  <div className="w-10 flex justify-center">
-                    {getRankIcon(rank)}
-                  </div>
-
-                  {/* Avatar */}
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-[#00E5FF]/30 to-[#FF007F]/30 border border-white/20 flex-shrink-0">
-                    {leader.photoURL ? (
-                      <img src={leader.photoURL} alt={leader.displayName} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-lg font-bold text-white/60">
-                        {leader.displayName?.[0]?.toUpperCase() || '?'}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Name */}
-                  <div className="flex-1 min-w-0">
-                    <p className={`font-bold truncate ${isCurrentUser ? 'text-[#00E5FF]' : ''}`}>
-                      {leader.displayName}
-                      {isCurrentUser && <span className="text-xs text-[#00E5FF]/60 ml-2">(You)</span>}
-                    </p>
-                    <div className="flex items-center gap-3 text-xs text-gray-400 mt-0.5">
-                      {leader.streak > 0 && (
-                        <span className="flex items-center gap-1">
-                          <Flame size={12} className="text-[#FF007F]" /> {leader.streak}d streak
-                        </span>
-                      )}
-                      {leader.totalMinutes > 0 && (
-                        <span>{leader.totalMinutes}m active</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Score */}
-                  <div className="text-right">
-                    <p className={`text-xl font-bold ${rank <= 3 ? 'text-[#00E5FF]' : ''}`}>
-                      {leader.totalReps.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-gray-500">reps</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-20 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md">
-            <Trophy size={48} className="mx-auto mb-4 text-gray-600" />
-            <h3 className="text-xl font-bold text-gray-400 mb-2">No Rankings Yet</h3>
-            <p className="text-gray-500 mb-6">Complete workouts to appear on the leaderboard!</p>
-            <Link to="/workout" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#00E5FF] to-[#0088FF] text-black font-bold rounded-xl hover:scale-105 transition-transform">
-              <Activity size={18} /> Start Working Out
+        {leaders.length === 0 ? (
+          <div className="glass-card-strong animate-scale-in" style={{ textAlign: 'center', padding: '70px 40px' }}>
+            <Trophy size={56} color="var(--text-muted)" style={{ marginBottom: 16, opacity: 0.3 }} />
+            <h3 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>No Rankings Yet</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>Complete workouts to appear here!</p>
+            <Link to="/workout" className="btn-skeu btn-skeu-primary" style={{ padding: '12px 28px' }}>
+              <Activity size={16} /> Start Working Out
             </Link>
           </div>
+        ) : (
+          <>
+            {/* ── Podium ───────────────────────────── */}
+            {leaders.length >= 3 && (
+              <div className="animate-slide-up" style={{
+                display: 'flex', justifyContent: 'center', alignItems: 'flex-end',
+                gap: 10, marginBottom: 36, padding: '0 12px'
+              }}>
+                {[leaders[1], leaders[0], leaders[2]].map((leader, idx) => {
+                  const rank = [2, 1, 3][idx];
+                  const color = podiumColors[rank];
+                  const h = podiumHeights[rank];
+                  const size = rank === 1 ? 68 : 52;
+                  return (
+                    <div key={leader.id} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: 180 }}>
+                      {rank === 1 && <Star size={20} color="#FDCB6E" style={{ marginBottom: 6 }} />}
+                      {/* Avatar */}
+                      <div style={{
+                        width: size, height: size, borderRadius: '50%', overflow: 'hidden',
+                        border: `3px solid ${color}`, marginBottom: 8,
+                        boxShadow: `0 0 24px ${color}50`
+                      }}>
+                        {leader.photoURL
+                          ? <img src={leader.photoURL} alt={leader.displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `linear-gradient(135deg, ${color}50, ${color}25)`, fontWeight: 800, fontSize: size * 0.38, color }}>
+                              {leader.displayName?.[0]?.toUpperCase() || '?'}
+                            </div>
+                        }
+                      </div>
+                      <p style={{ fontWeight: 800, fontSize: 13, textAlign: 'center', marginBottom: 3, color: 'var(--text-primary)', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
+                        {leader.displayName}
+                      </p>
+                      <p style={{ fontWeight: 900, fontSize: 15, color, fontFamily: "'Outfit', sans-serif" }}>
+                        {leader.totalReps.toLocaleString()}
+                      </p>
+                      {/* Podium bar */}
+                      <div style={{
+                        width: '100%', height: h, marginTop: 8,
+                        borderRadius: '14px 14px 0 0',
+                        background: `linear-gradient(180deg, ${color}28, ${color}10)`,
+                        border: `1px solid ${color}30`, borderBottom: 'none',
+                        display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 14
+                      }}>
+                        {getRankBadge(rank)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ── Full Rankings ─────────────────────── */}
+            <div className="stagger-children" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {leaders.map((leader, idx) => {
+                const rank = idx + 1;
+                const isMe = leader.id === currentUserId;
+                const color = podiumColors[rank];
+                return (
+                  <div key={leader.id} className="glass-card" style={{
+                    display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderRadius: 16,
+                    background: rank <= 3 ? `linear-gradient(135deg, ${color}10, transparent)` : undefined,
+                    border: isMe ? `1px solid var(--primary)` : rank <= 3 ? `1px solid ${color}30` : undefined,
+                    boxShadow: isMe ? `0 0 0 1px var(--primary-light), var(--shadow-sm)` : undefined
+                  }}>
+                    <div style={{ width: 32, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                      {getRankBadge(rank)}
+                    </div>
+                    {/* Avatar */}
+                    <div style={{
+                      width: 42, height: 42, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+                      background: rank <= 3 ? `linear-gradient(135deg, ${color}40, ${color}20)` : 'var(--gradient-primary)',
+                      border: `2px solid ${rank <= 3 ? color + '50' : 'var(--border-color)'}`
+                    }}>
+                      {leader.photoURL
+                        ? <img src={leader.photoURL} alt={leader.displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 16, color: rank <= 3 ? color : 'white' }}>
+                            {leader.displayName?.[0]?.toUpperCase() || '?'}
+                          </div>
+                      }
+                    </div>
+                    {/* Name */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 700, fontSize: 15, color: isMe ? 'var(--primary)' : 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {leader.displayName}
+                        {isMe && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: 'var(--primary-light)', opacity: 0.9 }}>(You)</span>}
+                      </p>
+                      <div style={{ display: 'flex', gap: 10, fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                        {leader.streak > 0 && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <Flame size={11} color="#FD79A8" /> {leader.streak}d
+                          </span>
+                        )}
+                        {leader.totalMinutes > 0 && <span>{leader.totalMinutes}m active</span>}
+                      </div>
+                    </div>
+                    {/* Score */}
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <p style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Outfit', sans-serif", color: rank <= 3 ? color : 'var(--text-primary)' }}>
+                        {leader.totalReps.toLocaleString()}
+                      </p>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>reps</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>
