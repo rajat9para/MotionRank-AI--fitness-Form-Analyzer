@@ -27,3 +27,8 @@ dist-ssr/
 *.sln
 *.sw?
 .DS_Store
+
+# Large Media
+*.mp4
+phototo/
+frontend/public/assets/*.mp4

@@ -100,7 +100,7 @@ class VoiceCoach {
   /**
    * Speak text with throttling. `force` bypasses cooldown.
    */
-  speak(text, force = false) {
+  async speak(text, force = false) {
     if (!this.enabled || !text || !this.synth) return;
     if (this.voices.length === 0) return;
 
@@ -110,12 +110,17 @@ class VoiceCoach {
       if (text === this.lastSpokenText && now - this.lastSpokenTime < 10000) return;
     }
 
-    if (this.synth.speaking && force) this.synth.cancel();
+    if (this.synth.speaking && force) {
+      this.synth.cancel();
+      // Small delay after cancel to avoid audio glitches
+      await new Promise(r => setTimeout(r, 80));
+    }
 
     const utt = new SpeechSynthesisUtterance(text);
     if (this.selectedVoice) utt.voice = this.selectedVoice;
-    utt.rate = 1.1;
-    utt.pitch = 1.05;
+    utt.rate = 0.95;   // Natural pace — clearer than fast
+    utt.pitch = 1.0;   // Neutral pitch — no distortion
+    utt.volume = 1.0;  // Full volume
 
     this.synth.speak(utt);
     this.lastSpokenText = text;

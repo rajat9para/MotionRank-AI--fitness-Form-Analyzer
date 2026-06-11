@@ -222,9 +222,24 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
   }, [captureFrame, exerciseType, sessionId, drawSkeleton, reps, feedback, fetchLlmInsight]);
 
   const startWorkout = async () => {
-    if (!cameraStarted) await startCamera();
+    if (!cameraStarted) {
+      await startCamera();
+      // Wait for the video element to actually receive frames
+      const v = videoRef.current;
+      if (v) {
+        await new Promise((resolve) => {
+          const check = () => {
+            if (v.readyState >= 2) resolve();
+            else setTimeout(check, 100);
+          };
+          check();
+        });
+      }
+    }
+    setReps(0);
     setElapsed(0);
     setLlmInsight('');
+    setFeedback('');
     for (let i = 3; i >= 1; i--) {
       setCountdown(i);
       await new Promise(r => setTimeout(r, 1000));
@@ -250,6 +265,7 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
   const endWorkout = async () => {
     clearInterval(intervalRef.current);
     setIsRunning(false);
+    if (voiceEnabled) voiceCoach.sessionEnd(reps);
     if (user && reps > 0) {
       const mins = Math.max(1, Math.round((Date.now() - (startTimeRef.current || Date.now())) / 60000));
       const score = formQuality === 'good' ? Math.min(100, 80 + Math.round(Math.random() * 15)) : 50 + Math.round(Math.random() * 20);
@@ -408,7 +424,7 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
                 <button className="btn-skeu btn-skeu-success" onClick={startWorkout}
                   style={{ fontSize: 16, padding: '14px 32px' }} id="start-camera-btn">
-                  <Camera size={18} /> Start Camera &amp; Workout
+                  <Camera size={18} /> Start Camera & Workout
                 </button>
                 {!hasLlmKey && (
                   <button className="btn-skeu btn-skeu-secondary" onClick={() => navigate('/profile')}

@@ -83,7 +83,37 @@ export default function Auth() {
       background: 'var(--gradient-page)',
       position: 'relative', overflow: 'hidden'
     }}>
-      {/* Animated bg */}
+      {/* Hero video background — very low opacity so text stays readable */}
+      <video
+        autoPlay muted loop playsInline
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'cover', zIndex: 0, opacity: isDark ? 0.15 : 0.10,
+          pointerEvents: 'none', filter: 'blur(1px)'
+        }}
+      >
+        <source src={import.meta.env.VITE_HERO_VIDEO_URL || "/assets/hero-video.mp4"} type="video/mp4" />
+      </video>
+
+      {/* Theme-aware background image as secondary layer */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 0,
+        backgroundImage: isDark ? "url('/assets/bg-dark.png')" : "url('/assets/bg-light.png')",
+        backgroundSize: 'cover', backgroundPosition: 'center',
+        opacity: isDark ? 0.18 : 0.12,
+        pointerEvents: 'none', transition: 'opacity 0.5s ease'
+      }} />
+
+      {/* Gradient overlay for text readability */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 0,
+        background: isDark
+          ? 'linear-gradient(135deg, rgba(13,13,26,0.88) 0%, rgba(22,22,46,0.75) 50%, rgba(19,13,26,0.85) 100%)'
+          : 'linear-gradient(135deg, rgba(250,251,255,0.82) 0%, rgba(232,234,255,0.70) 50%, rgba(255,240,245,0.80) 100%)',
+        pointerEvents: 'none'
+      }} />
+
+      {/* Animated bg blobs */}
       <div className="bg-blob" style={{ top: '5%',  left: '5%',   width: 500, height: 500, background: '#6C5CE7' }} />
       <div className="bg-blob" style={{ bottom: '0', right: '30%', width: 400, height: 400, background: '#FD79A8', animationDelay: '-7s' }} />
       <div className="bg-blob" style={{ top: '40%', right: '5%',   width: 300, height: 300, background: '#00CEC9', animationDelay: '-14s' }} />
