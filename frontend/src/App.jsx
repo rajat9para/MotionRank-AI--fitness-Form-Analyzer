@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './ThemeContext';
 import Dashboard from './components/Dashboard';
-import Landing from './components/landing/Landing';
 import Auth from './components/Auth';
 import Profile from './components/Profile';
 import Leaderboard from './components/Leaderboard';
@@ -14,8 +13,7 @@ function App() {
     <ThemeProvider>
       <Router>
         <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/auth" element={<Auth />} />
+          <Route path="/" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/workout" element={<WorkoutAnalyzer />} />
           <Route path="/profile" element={<Profile />} />

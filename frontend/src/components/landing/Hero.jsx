@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, Play } from 'lucide-react';
@@ -15,7 +15,6 @@ const HEADLINES = [
 
 export default function Hero() {
   const navigate = useNavigate();
-  const videoRef = useRef(null);
   const [idx, setIdx] = useState(0);
   const [show3D, setShow3D] = useState(false);
   const { scrollY } = useScroll();
@@ -27,27 +26,15 @@ export default function Hero() {
     const t = setInterval(() => setIdx((i) => (i + 1) % HEADLINES.length), 2600);
     // Defer mounting the 3D canvas until after first paint for faster LCP
     const raf = requestAnimationFrame(() => setShow3D(true));
-    // Cinematic slow-motion playback for an IMAX-style feel
-    if (videoRef.current) videoRef.current.playbackRate = 0.55;
     return () => { clearInterval(t); cancelAnimationFrame(raf); };
   }, []);
 
   return (
     <header className="mr-hero">
-      <motion.div className="mr-hero-bg" style={{ y: bgY }}>
-        <video
-          ref={videoRef}
-          className="mr-hero-video"
-          src="/assets/hero-video.mp4"
-          poster="/assets/hero-athlete.png"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-        />
-      </motion.div>
-      <div className="mr-hero-grain" />
+      <motion.div
+        className="mr-hero-bg"
+        style={{ y: bgY, backgroundImage: "url('/assets/hero-athlete.png')" }}
+      />
       <div className="mr-hero-veil" />
 
       {show3D && (
