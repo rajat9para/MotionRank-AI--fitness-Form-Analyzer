@@ -4,7 +4,7 @@ import { auth } from '../firebase';
 import { updateProfile } from 'firebase/auth';
 import { getUserProfile, saveUserProfile, getUserSessions } from '../db';
 import { Activity, Camera, Save, Trophy, Flame, Calendar, Dumbbell, Key, Eye, EyeOff, Check, TrendingUp } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, CartesianGrid } from 'recharts';
 import Navbar from './Navbar';
 import AnimatedCounter from './AnimatedCounter';
 import EmptyState, { EmptyWorkouts } from './EmptyState';
@@ -251,15 +251,48 @@ export default function Profile() {
             </div>
 
             {/* Form Trend */}
-            {formTrend.length > 1 && (
-              <div className="glass-card animate-slide-up" style={{ padding: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                  <TrendingUp size={17} color="var(--accent-green)" />
-                  <h3 style={{ fontSize: 17, fontWeight: 700 }}>Form Trend</h3>
+            {formTrend.length > 1 && (() => {
+              const scores = formTrend.map((d) => d.score);
+              const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+              const best = Math.max(...scores);
+              const latest = scores[scores.length - 1];
+              const delta = latest - scores[0];
+              return (
+              <div className="glass-card-strong animate-slide-up" style={{ padding: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <TrendingUp size={17} color="var(--accent-green)" />
+                    <h3 style={{ fontSize: 17, fontWeight: 700 }}>Form Trend</h3>
+                  </div>
+                  <span className={`chip ${delta >= 0 ? 'chip-green' : 'chip-orange'}`} style={{ fontSize: 11 }}>
+                    {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}% since start
+                  </span>
                 </div>
+
+                {/* Summary stats */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 18 }}>
+                  {[
+                    { label: 'Latest', value: latest, color: 'var(--primary)' },
+                    { label: 'Average', value: avg, color: 'var(--accent-pink)' },
+                    { label: 'Best', value: best, color: 'var(--accent-green)' },
+                  ].map((s) => (
+                    <div key={s.label} style={{ textAlign: 'center', padding: '10px 6px', borderRadius: 12, background: 'var(--glass-bg)', border: '1px solid var(--border-color)' }}>
+                      <p style={{ fontSize: 22, fontWeight: 900, fontFamily: "'Outfit', sans-serif", color: s.color, lineHeight: 1 }}>{s.value}%</p>
+                      <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 4 }}>{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+
                 <div style={{ height: 200 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={formTrend} margin={{ top: 5, right: 8, bottom: 5, left: -16 }}>
+                    <AreaChart data={formTrend} margin={{ top: 5, right: 8, bottom: 5, left: -16 }}>
+                      <defs>
+                        <linearGradient id="formGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#6C5CE7" stopOpacity={0.45} />
+                          <stop offset="100%" stopColor="#6C5CE7" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
                       <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
                       <YAxis domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
                       <Tooltip
@@ -270,13 +303,16 @@ export default function Profile() {
                         labelStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
                         formatter={(v) => [`${v}%`, 'Form']}
                       />
-                      <Line type="monotone" dataKey="score" stroke="#6C5CE7" strokeWidth={3}
-                        dot={{ fill: '#6C5CE7', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
-                    </LineChart>
+                      <ReferenceLine y={avg} stroke="var(--accent-pink)" strokeDasharray="5 4" strokeOpacity={0.7}
+                        label={{ value: `avg ${avg}%`, fill: 'var(--accent-pink)', fontSize: 10, fontWeight: 700, position: 'insideTopRight' }} />
+                      <Area type="monotone" dataKey="score" stroke="#6C5CE7" strokeWidth={3}
+                        fill="url(#formGradient)" dot={{ fill: '#6C5CE7', strokeWidth: 2, r: 3 }} activeDot={{ r: 6 }} />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
-            )}
+              );
+            })()}
 
             {/* Workout History */}
             <div className="glass-card animate-slide-up" style={{ padding: 24, flex: 1 }}>

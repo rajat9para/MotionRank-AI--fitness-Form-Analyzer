@@ -861,9 +861,14 @@ img { transition: opacity 0.3s ease; }
   background: linear-gradient(90deg, var(--primary), var(--accent-pink));
 }
 
+.hud-feedback p:last-child { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
 @media (max-width: 640px) {
   .hud-reps { padding: 8px 14px; }
   .hud-reps .hud-reps-value { font-size: 38px !important; }
+  .hud-feedback { max-width: 150px !important; padding: 7px 11px !important; }
+  .hud-feedback p:last-child { font-size: 11px !important; }
+  .hud-progress { bottom: 56px !important; }
   .main-content { padding: calc(var(--nav-height) + 14px) 12px 24px; }
 }
 

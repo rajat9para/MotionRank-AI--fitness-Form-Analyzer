@@ -490,28 +490,28 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
               )}
 
               {/* HUD — top row */}
-              <div style={{ position: 'absolute', top: 14, left: 14, right: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 5, pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', top: 14, left: 14, right: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', zIndex: 5, pointerEvents: 'none' }}>
                 {/* Rep counter */}
-                <div style={{
-                  background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(14px)', borderRadius: 18,
-                  padding: '10px 18px', border: `2px solid ${formQuality === 'good' ? '#00B894' : '#FF6B6B'}`, transition: 'border-color 0.3s'
-                }}>
+                <div className={`hud-reps ${formQuality === 'good' ? 'good' : 'bad'}`}>
                   <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }}>Reps</p>
-                  <p className="animate-count-up" key={reps} style={{ fontSize: 52, fontWeight: 900, color: 'white', fontFamily: "'Outfit', sans-serif", lineHeight: 1 }}>{reps}</p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                    <p className="hud-reps-value animate-count-up" key={reps} style={{ fontSize: 52, fontWeight: 900, color: 'white', fontFamily: "'Outfit', sans-serif", lineHeight: 1 }}>{reps}</p>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.45)', fontFamily: "'Outfit', sans-serif" }}>/ {targetReps}</span>
+                  </div>
                 </div>
 
                 {/* Timer */}
                 {isRunning && (
-                  <div style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(12px)', borderRadius: 14, padding: '8px 16px', border: '1px solid rgba(255,255,255,0.15)' }}>
+                  <div className="hud-card" style={{ padding: '8px 16px' }}>
                     <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700 }}>Time</p>
                     <p style={{ fontSize: 22, fontWeight: 800, color: 'white', fontFamily: "'Outfit', sans-serif" }}>{fmtTime(elapsed)}</p>
                   </div>
                 )}
 
                 {/* Feedback */}
-                <div style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(12px)', borderRadius: 16, padding: '10px 16px', maxWidth: 260, border: '1px solid rgba(255,255,255,0.12)' }}>
+                <div className="hud-card hud-feedback" style={{ padding: '10px 16px', maxWidth: 260 }}>
                   <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, marginBottom: 4 }}>Form Coach</p>
-                  <p style={{ color: formQuality === 'good' ? '#00B894' : '#FF6B6B', fontWeight: 700, fontSize: 13, lineHeight: 1.4 }}>
+                  <p style={{ color: formQuality === 'good' ? '#00D9A3' : '#FF8585', fontWeight: 700, fontSize: 13, lineHeight: 1.4 }}>
                     {feedback || 'Waiting…'}
                   </p>
                 </div>
@@ -531,7 +531,7 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
 
               {/* Stage indicator */}
               {isRunning && (
-                <div style={{ position: 'absolute', bottom: 76, left: 14, zIndex: 5 }}>
+                <div style={{ position: 'absolute', bottom: 100, left: 14, zIndex: 5 }}>
                   <div style={{
                     background: stage === 'down' ? 'rgba(253,121,168,0.75)' : 'rgba(0,184,148,0.75)',
                     backdropFilter: 'blur(8px)', borderRadius: 12, padding: '7px 14px',
@@ -551,13 +551,35 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
               {/* LLM insight banner */}
               {llmInsight && llmEnabled && (
                 <div className="animate-slide-up" style={{
-                  position: 'absolute', bottom: 76, right: 14, left: 160, zIndex: 5,
+                  position: 'absolute', bottom: 100, right: 14, left: 160, zIndex: 5,
                   background: 'rgba(108,92,231,0.8)', backdropFilter: 'blur(10px)',
                   borderRadius: 12, padding: '8px 14px',
                   border: '1px solid rgba(162,155,254,0.4)'
                 }}>
                   <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 700, letterSpacing: 1, marginBottom: 2 }}>🤖 AI COACH</p>
                   <p style={{ color: 'white', fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>{llmInsight}</p>
+                </div>
+              )}
+
+              {/* Rep-goal progress bar */}
+              {isRunning && (
+                <div className="hud-progress" style={{ bottom: 60 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)' }}>
+                      {progressPct >= 100 ? '🏆 Goal Smashed!' : 'Rep Goal'}
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: 'white', fontFamily: "'Outfit', sans-serif" }}>
+                      {reps} / {targetReps} · {progressPct}%
+                    </span>
+                  </div>
+                  <div className="hud-progress-track">
+                    <div className="hud-progress-fill" style={{
+                      width: `${progressPct}%`,
+                      background: progressPct >= 100
+                        ? 'linear-gradient(90deg, #00B894, #00D9A3)'
+                        : 'linear-gradient(90deg, var(--primary), var(--accent-pink))'
+                    }} />
+                  </div>
                 </div>
               )}
 
