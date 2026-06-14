@@ -1,14 +1,15 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
-import { saveSession } from '../db';
+import { saveSession, getUserSessions } from '../db';
 import Navbar from './Navbar';
 import {
   Play, Pause, Square, Camera, ChevronDown,
   Mic, MicOff, Globe, Zap, Brain
 } from 'lucide-react';
 import voiceCoach from '../utils/VoiceCoach';
+import { useToast } from '../ToastContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -34,7 +35,9 @@ export default function WorkoutAnalyzer() {
   const intervalRef    = useRef(null);
   const startTimeRef   = useRef(null);
   const isAnalyzingRef = useRef(false);
+  const formScoresRef  = useRef([]);
   const navigate       = useNavigate();
+  const { addToast }   = useToast();
 
   const [reps,           setReps]           = useState(0);
   const [feedback,       setFeedback]       = useState('');
@@ -56,8 +59,17 @@ export default function WorkoutAnalyzer() {
   const [llmEnabled,     setLlmEnabled]     = useState(false);
   const [llmInsight,     setLlmInsight]     = useState('');
   const [elapsed,        setElapsed]        = useState(0);
+  const [pastSessions,   setPastSessions]   = useState([]);
 
   const currentEx = EXERCISES.find(e => e.id === exerciseType) || EXERCISES[0];
+
+  // Target reps = most recent prior session for this exercise (fallback 10).
+  const targetReps = useMemo(() => {
+    const last = pastSessions.find(s => s.exerciseType === exerciseType);
+    return last?.correctReps > 0 ? last.correctReps : 10;
+  }, [pastSessions, exerciseType]);
+
+  const progressPct = Math.min(100, Math.round((reps / targetReps) * 100));
 
   // Sync voice coach
   useEffect(() => {
@@ -68,12 +80,17 @@ export default function WorkoutAnalyzer() {
 
   // Auth
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) { navigate('/'); return; }
       setUser(u);
       // Check if user has an LLM key configured
       const k = localStorage.getItem('mr_llm_key') || import.meta.env.VITE_GEMINI_API_KEY;
       if (k) setLlmEnabled(true);
+      // Load prior sessions to set a rep goal for the progress bar.
+      try {
+        const sessions = await getUserSessions(u.uid);
+        setPastSessions(sessions || []);
+      } catch (e) { console.warn('Could not load past sessions:', e); }
     });
     return () => unsub();
   }, [navigate]);
@@ -212,6 +229,7 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
         setFeedback(data.feedback);
         setStage(data.stage);
         setFormQuality(data.form_quality || 'good');
+        formScoresRef.current.push(data.form_quality === 'good' ? 1 : 0);
         drawSkeleton(data.connections || [], data.form_quality || 'good');
         // Fetch LLM insight periodically
         fetchLlmInsight(data.feedback, data.form_quality, data.reps);
@@ -240,6 +258,7 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
     setElapsed(0);
     setLlmInsight('');
     setFeedback('');
+    formScoresRef.current = [];
     for (let i = 3; i >= 1; i--) {
       setCountdown(i);
       await new Promise(r => setTimeout(r, 1000));
@@ -268,7 +287,12 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
     if (voiceEnabled) voiceCoach.sessionEnd(reps);
     if (user && reps > 0) {
       const mins = Math.max(1, Math.round((Date.now() - (startTimeRef.current || Date.now())) / 60000));
-      const score = formQuality === 'good' ? Math.min(100, 80 + Math.round(Math.random() * 15)) : 50 + Math.round(Math.random() * 20);
+      const samples = formScoresRef.current;
+      const goodRatio = samples.length > 0
+        ? samples.reduce((a, b) => a + b, 0) / samples.length
+        : 0.5;
+      // Real form score derived from tracked good/bad samples (40–100 range).
+      const score = Math.round(40 + goodRatio * 60);
       await saveSession(user.uid, exerciseType, reps, score, mins);
     }
     try { await fetch(`${API_URL}/api/reset-session?session_id=${sessionId}&exercise_type=${exerciseType}`, { method: 'POST' }); } catch {}
@@ -365,7 +389,7 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
 
             {/* LLM toggle */}
             <button
-              onClick={() => { if (!hasLlmKey) { alert('Add your Gemini API key in Profile → LLM API Key first!'); return; } setLlmEnabled(!llmEnabled); }}
+              onClick={() => { if (!hasLlmKey) { addToast('Add your Gemini API key in Profile → LLM API Key first!', 'warning'); return; } setLlmEnabled(!llmEnabled); }}
               className={`btn-skeu ${llmEnabled && hasLlmKey ? 'btn-skeu-primary' : 'btn-skeu-secondary'}`}
               style={{ padding: '8px 14px', fontSize: 13 }}
               title={hasLlmKey ? 'Toggle AI coach insights' : 'Add API key in Profile first'}

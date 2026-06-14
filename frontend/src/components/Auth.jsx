@@ -125,7 +125,7 @@ export default function Auth() {
       </button>
 
       {/* ── Left Panel ─────────────────────────────────── */}
-      <div style={{
+      <div className="auth-left" style={{
         flex: '0 0 42%', padding: '60px 56px', display: 'flex', flexDirection: 'column',
         justifyContent: 'center', position: 'relative', zIndex: 1,
       }}>

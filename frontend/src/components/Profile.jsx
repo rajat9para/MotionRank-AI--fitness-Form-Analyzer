@@ -3,8 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { updateProfile } from 'firebase/auth';
 import { getUserProfile, saveUserProfile, getUserSessions } from '../db';
-import { Activity, Camera, Save, Trophy, Flame, Calendar, Dumbbell, Key, Eye, EyeOff, Check, ChevronRight } from 'lucide-react';
+import { Activity, Camera, Save, Trophy, Flame, Calendar, Dumbbell, Key, Eye, EyeOff, Check, TrendingUp } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import Navbar from './Navbar';
+import AnimatedCounter from './AnimatedCounter';
+import EmptyState, { EmptyWorkouts } from './EmptyState';
+import { useToast } from '../ToastContext';
 
 const CLOUDINARY_CLOUD  = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME  || '';
 const CLOUDINARY_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
@@ -14,15 +18,16 @@ const exerciseEmoji = (t) => ({ squat: '🦵', crunch: '🔥' }[t] || '💪');
 export default function Profile() {
   const navigate    = useNavigate();
   const fileRef     = useRef(null);
+  const { addToast } = useToast();
   const [user,        setUser]        = useState(null);
   const [profile,     setProfile]     = useState(null);
   const [displayName, setDisplayName] = useState('');
   const [photoURL,    setPhotoURL]    = useState('');
   const [sessions,    setSessions]    = useState([]);
+  const [formTrend,   setFormTrend]   = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [saving,      setSaving]      = useState(false);
   const [uploading,   setUploading]   = useState(false);
-  const [message,     setMessage]     = useState('');
 
   // LLM API key state (stored locally only — never sent to backend)
   const [apiKey,       setApiKey]      = useState(() => localStorage.getItem('mr_llm_key') || '');
@@ -40,6 +45,17 @@ export default function Profile() {
         setPhotoURL(pd?.photoURL || u.photoURL || '');
         const s = await getUserSessions(u.uid);
         setSessions(s);
+        const trend = s
+          .filter((sess) => sess.formScore > 0)
+          .slice(0, 20)
+          .reverse()
+          .map((sess) => ({
+            score: sess.formScore,
+            date: sess.timestamp
+              ? new Date(sess.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              : '',
+          }));
+        setFormTrend(trend);
       } catch (e) { console.error(e); }
       finally { setLoading(false); }
     });
@@ -49,7 +65,7 @@ export default function Profile() {
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true); setMessage('');
+    setUploading(true);
     try {
       if (CLOUDINARY_CLOUD && CLOUDINARY_PRESET) {
         const fd = new FormData();
@@ -59,22 +75,22 @@ export default function Profile() {
         if (!res.ok) throw new Error('Upload failed');
         const data = await res.json();
         setPhotoURL(data.secure_url);
-        setMessage('Photo uploaded! Click Save to apply.');
+        addToast('Photo uploaded! Click Save to apply.', 'success');
       } else {
-        setMessage('Configure Cloudinary env vars to enable photo upload.');
+        addToast('Configure Cloudinary env vars to enable photo upload.', 'warning');
       }
-    } catch { setMessage('Upload failed. Please try again.'); }
+    } catch { addToast('Upload failed. Please try again.', 'error'); }
     finally   { setUploading(false); }
   };
 
   const handleSave = async () => {
     if (!user) return;
-    setSaving(true); setMessage('');
+    setSaving(true);
     try {
       await updateProfile(user, { displayName, photoURL: photoURL || undefined });
       await saveUserProfile(user.uid, { displayName, email: user.email, photoURL: photoURL || null });
-      setMessage('Profile saved!');
-    } catch { setMessage('Failed to save. Please try again.'); }
+      addToast('Profile saved!', 'success');
+    } catch { addToast('Failed to save. Please try again.', 'error'); }
     finally   { setSaving(false); }
   };
 
@@ -157,15 +173,6 @@ export default function Profile() {
                 <Save size={15} /> {saving ? 'Saving…' : 'Save Profile'}
               </button>
 
-              {message && (
-                <p className="animate-slide-up" style={{
-                  marginTop: 12, fontSize: 13, fontWeight: 600, textAlign: 'center',
-                  color: message.includes('ailed') || message.includes('onfigure') ? 'var(--danger)' : 'var(--accent-green)'
-                }}>
-                  {message}
-                </p>
-              )}
-
               {streak > 0 && (
                 <div style={{
                   marginTop: 18, padding: '10px 14px', borderRadius: 12,
@@ -229,9 +236,9 @@ export default function Profile() {
             {/* Stats */}
             <div className="stagger-children" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
               {[
-                { icon: Activity, label: 'Total Reps',    value: totalReps.toLocaleString(), color: '#6C5CE7' },
-                { icon: Flame,    label: 'Active Min',    value: totalMinutes || '—',         color: '#FD79A8' },
-                { icon: Trophy,   label: 'Sessions',      value: sessions.length,             color: '#FDCB6E' },
+                { icon: Activity, label: 'Total Reps',    value: <AnimatedCounter value={totalReps} />, color: '#6C5CE7' },
+                { icon: Flame,    label: 'Active Min',    value: totalMinutes ? <AnimatedCounter value={totalMinutes} /> : '—', color: '#FD79A8' },
+                { icon: Trophy,   label: 'Sessions',      value: <AnimatedCounter value={sessions.length} />, color: '#FDCB6E' },
               ].map(({ icon: Icon, label, value, color }) => (
                 <div key={label} className="glass-card" style={{ padding: '20px 16px', textAlign: 'center' }}>
                   <div style={{ width: 42, height: 42, borderRadius: 12, background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', border: `1px solid ${color}20` }}>
@@ -242,6 +249,34 @@ export default function Profile() {
                 </div>
               ))}
             </div>
+
+            {/* Form Trend */}
+            {formTrend.length > 1 && (
+              <div className="glass-card animate-slide-up" style={{ padding: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                  <TrendingUp size={17} color="var(--accent-green)" />
+                  <h3 style={{ fontSize: 17, fontWeight: 700 }}>Form Trend</h3>
+                </div>
+                <div style={{ height: 200 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={formTrend} margin={{ top: 5, right: 8, bottom: 5, left: -16 }}>
+                      <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                          borderRadius: 12, backdropFilter: 'blur(12px)', boxShadow: 'var(--shadow-md)'
+                        }}
+                        labelStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
+                        formatter={(v) => [`${v}%`, 'Form']}
+                      />
+                      <Line type="monotone" dataKey="score" stroke="#6C5CE7" strokeWidth={3}
+                        dot={{ fill: '#6C5CE7', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
 
             {/* Workout History */}
             <div className="glass-card animate-slide-up" style={{ padding: 24, flex: 1 }}>
@@ -283,13 +318,16 @@ export default function Profile() {
                   ))}
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', padding: '44px 20px' }}>
-                  <Dumbbell size={42} color="var(--text-muted)" style={{ opacity: 0.22, marginBottom: 12 }} />
-                  <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 18 }}>No workouts yet. Start your first one!</p>
-                  <Link to="/workout" className="btn-skeu btn-skeu-primary" style={{ padding: '10px 24px', fontSize: 13 }}>
-                    <Dumbbell size={15} /> Start Workout
-                  </Link>
-                </div>
+                <EmptyState
+                  illustration={<EmptyWorkouts />}
+                  title="No workouts yet"
+                  subtitle="Complete your first session to build your history and form trend."
+                  action={
+                    <Link to="/workout" className="btn-skeu btn-skeu-primary" style={{ padding: '10px 24px', fontSize: 13 }}>
+                      <Dumbbell size={15} /> Start Workout
+                    </Link>
+                  }
+                />
               )}
             </div>
           </div>
