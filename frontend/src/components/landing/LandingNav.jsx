@@ -45,7 +45,7 @@ export default function LandingNav() {
         </span>
       </button>
 
-      <div className="mr-nav-links">
+      <div className="mr-nav-links" style={{ marginRight: 'auto', marginLeft: '60px' }}>
         {LINKS.map((l) => (
           <button key={l.id} className="mr-nav-link" onClick={() => scrollTo(l.id)}
             style={{ background: 'none', border: 'none', cursor: 'pointer' }}>

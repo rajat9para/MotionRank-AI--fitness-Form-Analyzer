@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Zap, BarChart2, Users, Trophy, Check, ArrowRight } from 'lucide-react';
 import LandingNav from './LandingNav';
@@ -33,14 +34,19 @@ const FEATURES = [
 ];
 
 const TRANSFORMATIONS = [
-  { before: 'No form tracking', after: 'Perfect form feedback' },
-  { before: 'Solo workouts', after: 'Global community' },
-  { before: 'No data', after: 'Full analytics' },
-  { before: 'Static apps', after: 'Real-time coaching' },
+  { before: 'No form tracking', after: 'Perfect form feedback', imgBefore: '/assets/motionrank_before.png', imgAfter: '/assets/motionrank_after.png' },
+  { before: 'Solo workouts', after: 'Global community', imgBefore: '/assets/community_before.png', imgAfter: '/assets/community_after.png' },
+  { before: 'No data', after: 'Full analytics', imgBefore: '/assets/data_before.png', imgAfter: '/assets/data_after.png' },
 ];
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const [transIdx, setTransIdx] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setTransIdx((i) => (i + 1) % TRANSFORMATIONS.length), 3500);
+    return () => clearInterval(t);
+  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -154,28 +160,72 @@ export default function LandingPage() {
             MotionRank
           </h2>
 
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            className="mr-grid"
-            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 32 }}
-          >
-            {TRANSFORMATIONS.map((trans, idx) => (
-              <motion.div key={idx} variants={itemVariants} style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 20, flex: 1 }}>
-                  <div className="mr-card" style={{ padding: 24, backgroundColor: 'rgba(255, 255, 255, 0.025)' }}>
-                    <p style={{ color: '#a7a7a0', fontSize: '0.95rem' }}>{trans.before}</p>
+          <div style={{ position: 'relative', height: 460, width: '100%', maxWidth: 1100, margin: '0 auto' }}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={transIdx}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
+                style={{ display: 'flex', gap: 32, alignItems: 'center', position: 'absolute', width: '100%' }}
+              >
+                {/* Before Card */}
+                <div className="mr-card" style={{ 
+                  flex: 1, height: 460, overflow: 'hidden', position: 'relative', 
+                  backgroundColor: 'rgba(10, 10, 12, 0.8)',
+                  borderRadius: 24, border: '1px solid rgba(255, 255, 255, 0.05)',
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
+                }}>
+                  <img src={TRANSFORMATIONS[transIdx].imgBefore} alt="Before" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.4, filter: 'grayscale(100%)', transform: 'scale(1.05)', transition: 'transform 10s ease-out' }} 
+                  />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(5,5,6,0.95) 0%, rgba(5,5,6,0.4) 40%, transparent 100%)' }} />
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', padding: '36px 32px' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.2em', color: '#a7a7a0', textTransform: 'uppercase', marginBottom: 8 }}>Before</div>
+                    <p style={{ color: '#fff', fontSize: '1.6rem', fontWeight: 600, margin: 0, fontFamily: "'Outfit', sans-serif" }}>{TRANSFORMATIONS[transIdx].before}</p>
                   </div>
-                  <ArrowRight size={24} style={{ color: '#c6f135', transform: 'rotate(90deg)' }} />
-                  <div className="mr-card" style={{ padding: 24, borderColor: '#c6f135', borderWidth: 2 }}>
-                    <p style={{ color: '#c6f135', fontSize: '0.95rem', fontWeight: 600 }}>{trans.after}</p>
+                </div>
+                
+                {/* Center Arrow */}
+                <div style={{ 
+                  width: 64, height: 64, borderRadius: '50%', background: 'rgba(198, 241, 53, 0.1)', 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  border: '1px solid rgba(198, 241, 53, 0.3)', backdropFilter: 'blur(10px)',
+                  boxShadow: '0 0 30px rgba(198,241,53,0.2)'
+                }}>
+                  <ArrowRight size={32} style={{ color: '#c6f135' }} />
+                </div>
+                
+                {/* After Card */}
+                <div className="mr-card" style={{ 
+                  flex: 1, height: 460, overflow: 'hidden', position: 'relative', 
+                  borderColor: 'rgba(198, 241, 53, 0.5)', borderWidth: 1, 
+                  borderRadius: 24, background: 'rgba(198, 241, 53, 0.02)', 
+                  boxShadow: '0 20px 60px rgba(198,241,53,0.15), inset 0 0 0 1px rgba(198,241,53,0.2)'
+                }}>
+                  <img src={TRANSFORMATIONS[transIdx].imgAfter} alt="After" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.9, transform: 'scale(1.05)', transition: 'transform 10s ease-out' }} 
+                  />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(5,5,6,0.95) 0%, rgba(198,241,53,0.1) 60%, transparent 100%)' }} />
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', padding: '36px 32px' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 800, letterSpacing: '0.2em', color: '#c6f135', textTransform: 'uppercase', marginBottom: 8 }}>After</div>
+                    <p style={{ color: '#c6f135', fontSize: '1.6rem', fontWeight: 700, margin: 0, fontFamily: "'Outfit', sans-serif" }}>{TRANSFORMATIONS[transIdx].after}</p>
                   </div>
                 </div>
               </motion.div>
+            </AnimatePresence>
+          </div>
+          
+          <div style={{ display: 'flex', gap: 8, marginTop: 40, justifyContent: 'center' }}>
+            {TRANSFORMATIONS.map((_, i) => (
+              <div key={i} style={{ 
+                width: i === transIdx ? 32 : 8, height: 8, borderRadius: 4, 
+                background: i === transIdx ? '#c6f135' : 'rgba(255,255,255,0.2)',
+                transition: 'all 0.3s ease'
+              }} />
             ))}
-          </motion.div>
+          </div>
         </motion.div>
       </section>
 

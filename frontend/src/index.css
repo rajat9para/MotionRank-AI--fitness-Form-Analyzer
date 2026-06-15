@@ -53,28 +53,32 @@
 
 /* ── Dark Mode ────────────────────────────────────────────────────────── */
 .dark {
-  --bg-primary: #0D0D1A;
-  --bg-secondary: #13132A;
-  --bg-card: rgba(22, 22, 45, 0.75);
-  --bg-card-hover: rgba(32, 32, 60, 0.88);
-  --bg-nav: rgba(10, 10, 22, 0.88);
+  --bg-primary: #050506;
+  --bg-secondary: #0a0a0d;
+  --bg-card: rgba(14, 14, 18, 0.75);
+  --bg-card-hover: rgba(20, 20, 24, 0.88);
+  --bg-nav: rgba(5, 5, 6, 0.88);
 
-  --text-primary: #EEEEFF;
-  --text-secondary: #AAAAC8;
-  --text-muted: #5A5A8A;
+  --text-primary: #f4f4f0;
+  --text-secondary: #a7a7a0;
+  --text-muted: #6d6d68;
 
-  --border-color: rgba(108, 92, 231, 0.22);
-  --border-light: rgba(108, 92, 231, 0.10);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.04);
 
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.55);
-  --shadow-glow: 0 0 30px rgba(108, 92, 231, 0.28);
+  --shadow-glow: 0 0 30px rgba(198, 241, 53, 0.28);
 
-  --glass-bg: rgba(22, 22, 45, 0.55);
-  --glass-border: rgba(108, 92, 231, 0.18);
+  --glass-bg: rgba(14, 14, 18, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.08);
 
-  --gradient-page: linear-gradient(135deg, #0D0D1A 0%, #16162E 50%, #130D1A 100%);
+  --gradient-page: linear-gradient(135deg, #050506 0%, #0a0a0d 50%, #050506 100%);
+  
+  --primary: #c6f135;
+  --primary-light: #d8f56e;
+  --primary-dark: #8fd400;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
