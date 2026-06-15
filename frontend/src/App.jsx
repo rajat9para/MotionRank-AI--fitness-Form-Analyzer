@@ -7,14 +7,18 @@ import Profile from './components/Profile';
 import Leaderboard from './components/Leaderboard';
 import Friends from './components/Friends';
 import WorkoutAnalyzer from './components/WorkoutAnalyzer';
+import LandingPage from './components/landing/LandingPage';
 import './App.css';
 
 function AnimatedRoutes() {
   const location = useLocation();
+  const isLanding = location.pathname === '/';
+
   return (
-    <div key={location.pathname} className="page-transition-wrapper">
+    <div key={location.pathname} className={isLanding ? '' : 'page-transition-wrapper'}>
       <Routes location={location}>
-        <Route path="/" element={<Auth />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/auth" element={<Auth />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/workout" element={<WorkoutAnalyzer />} />
         <Route path="/profile" element={<Profile />} />
