@@ -16,6 +16,8 @@ import {
   getExerciseDistribution, getHeatmapData
 } from '../db';
 import Navbar from './Navbar';
+import AnimatedCounter from './AnimatedCounter';
+import EmptyState, { EmptyWorkouts } from './EmptyState';
 
 const FALLBACK = [
   { day: 'Mon', reps: 0 }, { day: 'Tue', reps: 0 }, { day: 'Wed', reps: 0 },
@@ -134,10 +136,10 @@ export default function Dashboard() {
 
         {/* ── Stat Cards ────────────────────────────────── */}
         <div className="stagger-children" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 28 }}>
-          <StatCard icon={Zap}       label="Total Reps"    value={totalReps.toLocaleString()} color="#6C5CE7" className="stat-card-purple" />
-          <StatCard icon={Clock}     label="Active Min"    value={totalMinutes || '—'}         color="#FD79A8" className="stat-card-pink"   />
-          <StatCard icon={Trophy}    label="Workouts"      value={recentSessions.length}       color="#FDCB6E" className="stat-card-orange" />
-          <StatCard icon={TrendingUp} label="Avg Form"    value={avgForm > 0 ? `${avgForm}%` : '—'} color="#00B894" className="stat-card-green" />
+          <StatCard icon={Zap}       label="Total Reps"    value={<AnimatedCounter value={totalReps} />} color="#6C5CE7" className="stat-card-purple" />
+          <StatCard icon={Clock}     label="Active Min"    value={totalMinutes ? <AnimatedCounter value={totalMinutes} /> : '—'} color="#FD79A8" className="stat-card-pink"   />
+          <StatCard icon={Trophy}    label="Workouts"      value={<AnimatedCounter value={recentSessions.length} />} color="#FDCB6E" className="stat-card-orange" />
+          <StatCard icon={TrendingUp} label="Avg Form"    value={avgForm > 0 ? <AnimatedCounter value={avgForm} suffix="%" /> : '—'} color="#00B894" className="stat-card-green" />
         </div>
 
         {/* ── Main Grid ─────────────────────────────────── */}
@@ -263,13 +265,16 @@ export default function Dashboard() {
                     )}
                   </div>
                 )) : (
-                  <div style={{ textAlign: 'center', padding: '32px 20px' }}>
-                    <Dumbbell size={36} color="var(--text-muted)" style={{ opacity: 0.25, marginBottom: 10 }} />
-                    <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>No workouts yet</p>
-                    <Link to="/workout" className="btn-skeu btn-skeu-primary" style={{ padding: '10px 22px', fontSize: 13 }}>
-                      Start First Workout
-                    </Link>
-                  </div>
+                  <EmptyState
+                    illustration={<EmptyWorkouts />}
+                    title="No workouts yet"
+                    subtitle="Start your first session and your activity will show up here."
+                    action={
+                      <Link to="/workout" className="btn-skeu btn-skeu-primary" style={{ padding: '10px 22px', fontSize: 13 }}>
+                        Start First Workout
+                      </Link>
+                    }
+                  />
                 )}
               </div>
             </div>

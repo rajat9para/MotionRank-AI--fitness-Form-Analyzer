@@ -4,6 +4,7 @@ import { auth } from '../firebase';
 import { getLeaderboard } from '../db';
 import { Trophy, Flame, Crown, Activity, Medal, Star } from 'lucide-react';
 import Navbar from './Navbar';
+import EmptyState, { EmptyLeaderboard } from './EmptyState';
 
 export default function Leaderboard() {
   const navigate = useNavigate();
@@ -59,13 +60,17 @@ export default function Leaderboard() {
         </div>
 
         {leaders.length === 0 ? (
-          <div className="glass-card-strong animate-scale-in" style={{ textAlign: 'center', padding: '70px 40px' }}>
-            <Trophy size={56} color="var(--text-muted)" style={{ marginBottom: 16, opacity: 0.3 }} />
-            <h3 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>No Rankings Yet</h3>
-            <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>Complete workouts to appear here!</p>
-            <Link to="/workout" className="btn-skeu btn-skeu-primary" style={{ padding: '12px 28px' }}>
-              <Activity size={16} /> Start Working Out
-            </Link>
+          <div className="glass-card-strong animate-scale-in" style={{ padding: '44px 40px' }}>
+            <EmptyState
+              illustration={<EmptyLeaderboard />}
+              title="No Rankings Yet"
+              subtitle="Complete workouts to climb the global leaderboard and appear here."
+              action={
+                <Link to="/workout" className="btn-skeu btn-skeu-primary" style={{ padding: '12px 28px' }}>
+                  <Activity size={16} /> Start Working Out
+                </Link>
+              }
+            />
           </div>
         ) : (
           <>

@@ -1,14 +1,15 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
-import { saveSession } from '../db';
+import { saveSession, getUserSessions } from '../db';
 import Navbar from './Navbar';
 import {
   Play, Pause, Square, Camera, ChevronDown,
   Mic, MicOff, Globe, Zap, Brain
 } from 'lucide-react';
 import voiceCoach from '../utils/VoiceCoach';
+import { useToast } from '../ToastContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -34,7 +35,9 @@ export default function WorkoutAnalyzer() {
   const intervalRef    = useRef(null);
   const startTimeRef   = useRef(null);
   const isAnalyzingRef = useRef(false);
+  const formScoresRef  = useRef([]);
   const navigate       = useNavigate();
+  const { addToast }   = useToast();
 
   const [reps,           setReps]           = useState(0);
   const [feedback,       setFeedback]       = useState('');
@@ -56,8 +59,17 @@ export default function WorkoutAnalyzer() {
   const [llmEnabled,     setLlmEnabled]     = useState(false);
   const [llmInsight,     setLlmInsight]     = useState('');
   const [elapsed,        setElapsed]        = useState(0);
+  const [pastSessions,   setPastSessions]   = useState([]);
 
   const currentEx = EXERCISES.find(e => e.id === exerciseType) || EXERCISES[0];
+
+  // Target reps = most recent prior session for this exercise (fallback 10).
+  const targetReps = useMemo(() => {
+    const last = pastSessions.find(s => s.exerciseType === exerciseType);
+    return last?.correctReps > 0 ? last.correctReps : 10;
+  }, [pastSessions, exerciseType]);
+
+  const progressPct = Math.min(100, Math.round((reps / targetReps) * 100));
 
   // Sync voice coach
   useEffect(() => {
@@ -68,12 +80,17 @@ export default function WorkoutAnalyzer() {
 
   // Auth
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) { navigate('/'); return; }
       setUser(u);
       // Check if user has an LLM key configured
       const k = localStorage.getItem('mr_llm_key') || import.meta.env.VITE_GEMINI_API_KEY;
       if (k) setLlmEnabled(true);
+      // Load prior sessions to set a rep goal for the progress bar.
+      try {
+        const sessions = await getUserSessions(u.uid);
+        setPastSessions(sessions || []);
+      } catch (e) { console.warn('Could not load past sessions:', e); }
     });
     return () => unsub();
   }, [navigate]);
@@ -212,6 +229,7 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
         setFeedback(data.feedback);
         setStage(data.stage);
         setFormQuality(data.form_quality || 'good');
+        formScoresRef.current.push(data.form_quality === 'good' ? 1 : 0);
         drawSkeleton(data.connections || [], data.form_quality || 'good');
         // Fetch LLM insight periodically
         fetchLlmInsight(data.feedback, data.form_quality, data.reps);
@@ -240,6 +258,7 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
     setElapsed(0);
     setLlmInsight('');
     setFeedback('');
+    formScoresRef.current = [];
     for (let i = 3; i >= 1; i--) {
       setCountdown(i);
       await new Promise(r => setTimeout(r, 1000));
@@ -268,7 +287,12 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
     if (voiceEnabled) voiceCoach.sessionEnd(reps);
     if (user && reps > 0) {
       const mins = Math.max(1, Math.round((Date.now() - (startTimeRef.current || Date.now())) / 60000));
-      const score = formQuality === 'good' ? Math.min(100, 80 + Math.round(Math.random() * 15)) : 50 + Math.round(Math.random() * 20);
+      const samples = formScoresRef.current;
+      const goodRatio = samples.length > 0
+        ? samples.reduce((a, b) => a + b, 0) / samples.length
+        : 0.5;
+      // Real form score derived from tracked good/bad samples (40–100 range).
+      const score = Math.round(40 + goodRatio * 60);
       await saveSession(user.uid, exerciseType, reps, score, mins);
     }
     try { await fetch(`${API_URL}/api/reset-session?session_id=${sessionId}&exercise_type=${exerciseType}`, { method: 'POST' }); } catch {}
@@ -365,7 +389,7 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
 
             {/* LLM toggle */}
             <button
-              onClick={() => { if (!hasLlmKey) { alert('Add your Gemini API key in Profile → LLM API Key first!'); return; } setLlmEnabled(!llmEnabled); }}
+              onClick={() => { if (!hasLlmKey) { addToast('Add your Gemini API key in Profile → LLM API Key first!', 'warning'); return; } setLlmEnabled(!llmEnabled); }}
               className={`btn-skeu ${llmEnabled && hasLlmKey ? 'btn-skeu-primary' : 'btn-skeu-secondary'}`}
               style={{ padding: '8px 14px', fontSize: 13 }}
               title={hasLlmKey ? 'Toggle AI coach insights' : 'Add API key in Profile first'}
@@ -466,28 +490,28 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
               )}
 
               {/* HUD — top row */}
-              <div style={{ position: 'absolute', top: 14, left: 14, right: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 5, pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', top: 14, left: 14, right: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', zIndex: 5, pointerEvents: 'none' }}>
                 {/* Rep counter */}
-                <div style={{
-                  background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(14px)', borderRadius: 18,
-                  padding: '10px 18px', border: `2px solid ${formQuality === 'good' ? '#00B894' : '#FF6B6B'}`, transition: 'border-color 0.3s'
-                }}>
+                <div className={`hud-reps ${formQuality === 'good' ? 'good' : 'bad'}`}>
                   <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }}>Reps</p>
-                  <p className="animate-count-up" key={reps} style={{ fontSize: 52, fontWeight: 900, color: 'white', fontFamily: "'Outfit', sans-serif", lineHeight: 1 }}>{reps}</p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                    <p className="hud-reps-value animate-count-up" key={reps} style={{ fontSize: 52, fontWeight: 900, color: 'white', fontFamily: "'Outfit', sans-serif", lineHeight: 1 }}>{reps}</p>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.45)', fontFamily: "'Outfit', sans-serif" }}>/ {targetReps}</span>
+                  </div>
                 </div>
 
                 {/* Timer */}
                 {isRunning && (
-                  <div style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(12px)', borderRadius: 14, padding: '8px 16px', border: '1px solid rgba(255,255,255,0.15)' }}>
+                  <div className="hud-card" style={{ padding: '8px 16px' }}>
                     <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700 }}>Time</p>
                     <p style={{ fontSize: 22, fontWeight: 800, color: 'white', fontFamily: "'Outfit', sans-serif" }}>{fmtTime(elapsed)}</p>
                   </div>
                 )}
 
                 {/* Feedback */}
-                <div style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(12px)', borderRadius: 16, padding: '10px 16px', maxWidth: 260, border: '1px solid rgba(255,255,255,0.12)' }}>
+                <div className="hud-card hud-feedback" style={{ padding: '10px 16px', maxWidth: 260 }}>
                   <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, marginBottom: 4 }}>Form Coach</p>
-                  <p style={{ color: formQuality === 'good' ? '#00B894' : '#FF6B6B', fontWeight: 700, fontSize: 13, lineHeight: 1.4 }}>
+                  <p style={{ color: formQuality === 'good' ? '#00D9A3' : '#FF8585', fontWeight: 700, fontSize: 13, lineHeight: 1.4 }}>
                     {feedback || 'Waiting…'}
                   </p>
                 </div>
@@ -507,7 +531,7 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
 
               {/* Stage indicator */}
               {isRunning && (
-                <div style={{ position: 'absolute', bottom: 76, left: 14, zIndex: 5 }}>
+                <div style={{ position: 'absolute', bottom: 100, left: 14, zIndex: 5 }}>
                   <div style={{
                     background: stage === 'down' ? 'rgba(253,121,168,0.75)' : 'rgba(0,184,148,0.75)',
                     backdropFilter: 'blur(8px)', borderRadius: 12, padding: '7px 14px',
@@ -527,13 +551,35 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
               {/* LLM insight banner */}
               {llmInsight && llmEnabled && (
                 <div className="animate-slide-up" style={{
-                  position: 'absolute', bottom: 76, right: 14, left: 160, zIndex: 5,
+                  position: 'absolute', bottom: 100, right: 14, left: 160, zIndex: 5,
                   background: 'rgba(108,92,231,0.8)', backdropFilter: 'blur(10px)',
                   borderRadius: 12, padding: '8px 14px',
                   border: '1px solid rgba(162,155,254,0.4)'
                 }}>
                   <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 700, letterSpacing: 1, marginBottom: 2 }}>🤖 AI COACH</p>
                   <p style={{ color: 'white', fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>{llmInsight}</p>
+                </div>
+              )}
+
+              {/* Rep-goal progress bar */}
+              {isRunning && (
+                <div className="hud-progress" style={{ bottom: 60 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)' }}>
+                      {progressPct >= 100 ? '🏆 Goal Smashed!' : 'Rep Goal'}
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: 'white', fontFamily: "'Outfit', sans-serif" }}>
+                      {reps} / {targetReps} · {progressPct}%
+                    </span>
+                  </div>
+                  <div className="hud-progress-track">
+                    <div className="hud-progress-fill" style={{
+                      width: `${progressPct}%`,
+                      background: progressPct >= 100
+                        ? 'linear-gradient(90deg, #00B894, #00D9A3)'
+                        : 'linear-gradient(90deg, var(--primary), var(--accent-pink))'
+                    }} />
+                  </div>
                 </div>
               )}
 

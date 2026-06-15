@@ -472,7 +472,15 @@ export const getFriends = async (userId) => {
  */
 export const getExerciseDistribution = async (userId) => {
   try {
-    const q = query(collection(db, "sessions"), where("userId", "==", userId));
+    // Limit to the last 12 months to keep the query cheap for power users.
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
+    const q = query(
+      collection(db, "sessions"),
+      where("userId", "==", userId),
+      where("timestamp", ">=", twelveMonthsAgo),
+      orderBy("timestamp", "asc")
+    );
     const querySnapshot = await getDocs(q);
     
     const dist = { pushup: 0, squat: 0, crunch: 0, pullup: 0, jumprope: 0, deadlift: 0 };

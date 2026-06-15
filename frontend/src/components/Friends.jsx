@@ -7,9 +7,12 @@ import {
 } from '../db';
 import { Search, UserPlus, UserCheck, UserX, Users, X, Check, Flame, Activity, Heart } from 'lucide-react';
 import Navbar from './Navbar';
+import EmptyState, { EmptyFriends, EmptySearch } from './EmptyState';
+import { useToast } from '../ToastContext';
 
 export default function Friends() {
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const searchTimeout = useRef(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,7 +28,6 @@ export default function Friends() {
 
   // UI
   const [activeTab, setActiveTab] = useState('friends'); // 'friends' | 'requests' | 'search'
-  const [actionMessage, setActionMessage] = useState('');
   const [processingIds, setProcessingIds] = useState(new Set());
 
   useEffect(() => {
@@ -80,8 +82,7 @@ export default function Friends() {
       user.photoURL || null
     );
 
-    setActionMessage(result.message);
-    setTimeout(() => setActionMessage(''), 3000);
+    addToast(result.message, result.success ? 'success' : 'error');
 
     if (result.success && result.message.includes('now friends')) {
       // Refresh friends list
@@ -105,12 +106,11 @@ export default function Friends() {
       setFriendRequests(prev => prev.filter(r => r.id !== requestId));
       const updated = await getFriends(user.uid);
       setFriends(updated);
-      setActionMessage('Friend added!');
+      addToast('Friend added!', 'success');
     } else {
-      setActionMessage('Failed to accept request');
+      addToast('Failed to accept request', 'error');
     }
 
-    setTimeout(() => setActionMessage(''), 3000);
     setProcessingIds(prev => {
       const next = new Set(prev);
       next.delete(requestId);
@@ -140,8 +140,7 @@ export default function Friends() {
     const success = await removeFriend(user.uid, friendId);
     if (success) {
       setFriends(prev => prev.filter(f => f.id !== friendId));
-      setActionMessage('Friend removed');
-      setTimeout(() => setActionMessage(''), 3000);
+      addToast('Friend removed', 'info');
     }
 
     setProcessingIds(prev => {
@@ -185,21 +184,6 @@ export default function Friends() {
             Find workout buddies and track each other's progress
           </p>
         </div>
-
-        {/* Action message toast */}
-        {actionMessage && (
-          <div className="animate-slide-down glass-card" style={{
-            padding: '12px 20px', marginBottom: 16, borderRadius: 14,
-            border: actionMessage.includes('Failed') || actionMessage.includes('already')
-              ? '1px solid rgba(255,107,107,0.3)'
-              : '1px solid rgba(0,184,148,0.3)',
-            color: actionMessage.includes('Failed') || actionMessage.includes('already')
-              ? 'var(--danger)' : 'var(--accent-green)',
-            fontWeight: 600, fontSize: 14, textAlign: 'center'
-          }}>
-            {actionMessage}
-          </div>
-        )}
 
         {/* Tabs */}
         <div className="animate-slide-up" style={{
@@ -340,15 +324,17 @@ export default function Friends() {
                 ))}
               </div>
             ) : searchQuery.length >= 2 ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <Users size={40} color="var(--text-muted)" style={{ opacity: 0.3, marginBottom: 12 }} />
-                <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>No users found matching "{searchQuery}"</p>
-              </div>
+              <EmptyState
+                illustration={<EmptySearch />}
+                title="No users found"
+                subtitle={`Nobody matched "${searchQuery}". Try a different name.`}
+              />
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <Search size={40} color="var(--text-muted)" style={{ opacity: 0.3, marginBottom: 12 }} />
-                <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Type a name to search for workout buddies</p>
-              </div>
+              <EmptyState
+                illustration={<EmptySearch />}
+                title="Find workout buddies"
+                subtitle="Type a name to search for people and send a friend request."
+              />
             )}
           </div>
         )}
@@ -413,15 +399,11 @@ export default function Friends() {
                 ))}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '50px 20px' }}>
-                <UserPlus size={44} color="var(--text-muted)" style={{ opacity: 0.3, marginBottom: 14 }} />
-                <h3 style={{ fontWeight: 700, fontSize: 18, color: 'var(--text-secondary)', marginBottom: 6, fontFamily: "'Outfit', sans-serif" }}>
-                  No Pending Requests
-                </h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                  When someone sends you a friend request, it'll appear here.
-                </p>
-              </div>
+              <EmptyState
+                illustration={<EmptyFriends />}
+                title="No Pending Requests"
+                subtitle="When someone sends you a friend request, it'll appear here."
+              />
             )}
           </div>
         )}
@@ -489,21 +471,21 @@ export default function Friends() {
                 ))}
               </div>
             ) : (
-              <div className="glass-card-strong" style={{ textAlign: 'center', padding: '50px 30px' }}>
-                <Users size={48} color="var(--text-muted)" style={{ opacity: 0.3, marginBottom: 16 }} />
-                <h3 style={{ fontWeight: 700, fontSize: 20, color: 'var(--text-secondary)', marginBottom: 8, fontFamily: "'Outfit', sans-serif" }}>
-                  No Friends Yet
-                </h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 24, maxWidth: 300, margin: '0 auto 24px' }}>
-                  Search for workout buddies and add them to your friends list!
-                </p>
-                <button
-                  onClick={() => setActiveTab('search')}
-                  className="btn-skeu btn-skeu-primary"
-                  style={{ padding: '12px 28px' }}
-                >
-                  <Search size={16} /> Find People
-                </button>
+              <div className="glass-card-strong">
+                <EmptyState
+                  illustration={<EmptyFriends />}
+                  title="No Friends Yet"
+                  subtitle="Search for workout buddies and add them to your friends list!"
+                  action={
+                    <button
+                      onClick={() => setActiveTab('search')}
+                      className="btn-skeu btn-skeu-primary"
+                      style={{ padding: '12px 28px' }}
+                    >
+                      <Search size={16} /> Find People
+                    </button>
+                  }
+                />
               </div>
             )}
           </div>
