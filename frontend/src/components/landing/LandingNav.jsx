@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Dumbbell } from 'lucide-react';
+import { Dumbbell, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../../ThemeContext';
 
 const LINKS = [
   { label: 'AI Coach', id: 'ai-coach' },
@@ -13,6 +14,7 @@ const LINKS = [
 export default function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
+  const { isDark, toggleTheme } = useTheme();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -54,7 +56,18 @@ export default function LandingNav() {
         ))}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        {/* Theme Toggle */}
+        <button className="theme-toggle" onClick={toggleTheme} style={{ transform: 'scale(0.85)' }}>
+          <div className="theme-toggle-track">
+            <Sun size={14} color={isDark ? '#6d6d68' : '#0a0a0d'} />
+            <Moon size={14} color={isDark ? '#c6f135' : '#6d6d68'} />
+          </div>
+          <div className={`theme-toggle-knob ${isDark ? 'dark' : 'light'}`}>
+            {isDark ? <Moon size={14} color="#0a0a0d" /> : <Sun size={14} color="#0a0a0d" />}
+          </div>
+        </button>
+
         <button className="mr-nav-link" onClick={() => navigate('/auth')}
           style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
           Sign In

@@ -120,7 +120,7 @@ export default function Dashboard() {
       <div className="bg-blob" style={{ top: '-10%', right: '0%', width: '60vw', height: '60vw', background: 'var(--volt-dim)', filter: 'blur(100px)', animationDuration: '20s' }} />
       <div className="bg-blob" style={{ bottom: '-20%', left: '-10%', width: '50vw', height: '50vw', background: 'rgba(108, 92, 231, 0.15)', filter: 'blur(120px)', animationDelay: '-5s' }} />
 
-      <div className="main-content" style={{ maxWidth: 1200, position: 'relative', zIndex: 2 }}>
+      <div className="main-content" style={{ position: 'relative', zIndex: 2 }}>
 
         {/* ── Hero greeting ─────────────────────────────── */}
         <div className="animate-slide-down" style={{ marginBottom: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
@@ -187,7 +187,7 @@ export default function Dashboard() {
           </div>
 
           {/* Middle Row (Charts & Radar) */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24 }}>
+          <div className="grid-landscape">
             {/* Bar chart */}
             <div className="mr-card animate-slide-up" style={{ padding: '28px 32px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
@@ -241,7 +241,7 @@ export default function Dashboard() {
           </div>
 
           {/* Bottom Row (Recent Workouts & Actions) */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24 }}>
+          <div className="grid-landscape">
             {/* Recent sessions */}
             <div className="mr-card animate-slide-up" style={{ padding: '28px 32px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
