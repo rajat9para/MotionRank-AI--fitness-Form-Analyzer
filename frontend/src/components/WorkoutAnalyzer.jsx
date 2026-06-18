@@ -6,17 +6,18 @@ import { saveSession } from '../db';
 import Navbar from './Navbar';
 import {
   Play, Pause, Square, Camera, ChevronDown,
-  Mic, MicOff, Globe, Zap, Brain, Timer, Target
+  Mic, MicOff, Globe, Zap, Brain, Timer, Target,
+  Activity, Dumbbell, Flame, CheckCircle2, AlertCircle, Focus
 } from 'lucide-react';
 import voiceCoach from '../utils/VoiceCoach';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const EXERCISES = [
-  { id: 'pushup', label: 'Push-ups', emoji: '💪', color: '#6C5CE7', tip: 'Position side-on to camera for best tracking' },
-  { id: 'squat',  label: 'Squats',   emoji: '🦵', color: '#00B894', tip: 'Face the camera with your full body visible' },
-  { id: 'crunch', label: 'Crunches', emoji: '🔥', color: '#FD79A8', tip: 'Position side-on while lying down' },
-  { id: 'plank',  label: 'Plank',    emoji: '🧘', color: '#FF9F43', tip: 'Side view — hold a straight line from head to heels' },
+  { id: 'pushup', label: 'Push-ups', icon: Dumbbell, color: '#6C5CE7', tip: 'Position side-on to camera for best tracking' },
+  { id: 'squat',  label: 'Squats',   icon: Activity, color: '#00B894', tip: 'Face the camera with your full body visible' },
+  { id: 'crunch', label: 'Crunches', icon: Flame,    color: '#FD79A8', tip: 'Position side-on while lying down' },
+  { id: 'plank',  label: 'Plank',    icon: Target,   color: '#FF9F43', tip: 'Side view — hold a straight line from head to heels' },
 ];
 
 const LANGUAGES = [
@@ -394,7 +395,7 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
             <div style={{ position: 'relative' }}>
               <button className="mr-btn mr-btn-ghost" onClick={() => setShowExSelect(!showExSelect)}
                 disabled={isRunning} id="exercise-select-btn" style={{ minWidth: 155, fontSize: 13, border: '1px solid var(--line-strong)' }}>
-                {currentEx.emoji} {currentEx.label} <ChevronDown size={14} />
+                <currentEx.icon size={16} /> {currentEx.label} <ChevronDown size={14} />
               </button>
               {showExSelect && (
                 <div className="mr-card animate-scale-in" style={{ position: 'absolute', top: '110%', right: 0, marginTop: 4, padding: 8, minWidth: 180, zIndex: 50, background: 'var(--panel)', border: '1px solid var(--line)' }}>
@@ -408,7 +409,7 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
                         fontWeight: exerciseType === ex.id ? 800 : 600, fontSize: 14,
                         transition: 'all 0.2s'
                       }}>
-                      <span style={{ fontSize: 20 }}>{ex.emoji}</span> {ex.label}
+                      <ex.icon size={20} color={exerciseType === ex.id ? ex.color : 'var(--ink)'} /> {ex.label}
                     </button>
                   ))}
                 </div>
@@ -469,13 +470,13 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
               </div>
               <div style={{ display: 'flex', gap: 12, marginTop: 36, flexWrap: 'wrap', justifyContent: 'center' }}>
                 {[
-                  { icon: '📐', text: 'Side view works best' },
-                  { icon: '🟢', text: 'Green = perfect form' },
-                  { icon: '🔴', text: 'Red = adjust form' },
-                  { icon: '🎙️', text: 'Voice coach guides you' },
+                  { icon: Focus, color: 'var(--text-primary)', text: 'Side view works best' },
+                  { icon: CheckCircle2, color: '#00B894', text: 'Green = perfect form' },
+                  { icon: AlertCircle, color: '#FF6B6B', text: 'Red = adjust form' },
+                  { icon: Mic, color: 'var(--primary)', text: 'Voice coach guides you' },
                 ].map((t, i) => (
                   <div key={i} className="chip chip-volt" style={{ gap: 6, padding: '6px 14px' }}>
-                    <span>{t.icon}</span><span style={{ fontSize: 12 }}>{t.text}</span>
+                    <t.icon size={14} color={t.color} /> <span style={{ fontSize: 12 }}>{t.text}</span>
                   </div>
                 ))}
               </div>
@@ -546,7 +547,7 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
                     transition: 'all 0.3s ease'
                   }}>
                     {isPlank
-                      ? (stage === 'active' ? '🟢 HOLDING' : '🔴 FORM BROKEN')
+                      ? (stage === 'active' ? '● HOLDING' : '○ FORM BROKEN')
                       : exerciseType === 'pushup'
                         ? (stage === 'down' ? '⬇ DOWN' : '⬆ UP')
                         : exerciseType === 'squat'

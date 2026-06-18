@@ -24,7 +24,12 @@ const FALLBACK = [
   { day: 'Sun', reps: 0 },
 ];
 
-const exerciseEmoji = (type) => ({ squat: '🦵', crunch: '🔥', plank: '🧘' }[type] || '💪');
+const ExerciseIcon = ({ type, size = 22 }) => {
+  if (type === 'squat') return <Activity size={size} color="var(--volt)" />;
+  if (type === 'crunch') return <Flame size={size} color="#FD79A8" />;
+  if (type === 'plank') return <Target size={size} color="#FF9F43" />;
+  return <Dumbbell size={size} color="#6C5CE7" />;
+};
 
 function StatCard({ icon: Icon, label, value, color, subValue, className = '' }) {
   return (
@@ -145,74 +150,19 @@ export default function Dashboard() {
           <StatCard icon={TrendingUp} label="Avg Form"    value={avgForm > 0 ? avgForm : 0} color="#00B894" className="mr-card" />
         </div>
 
-        {/* ── Main Grid ─────────────────────────────────── */}
-        <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 24, marginBottom: 24 }}>
-
-          {/* Left column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            {/* Radar */}
-            <div className="mr-card animate-slide-up" style={{ padding: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <Target size={18} color="var(--volt)" />
-                <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>Performance Radar</h3>
+        {/* ── Main Dashboard Layout ─────────────────────── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginBottom: 40 }}>
+          
+          {/* Heatmap Section (Full Width Leetcode Style) */}
+          <div className="mr-card animate-slide-up" style={{ padding: '28px 32px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Flame size={20} color="var(--volt)" />
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>Contribution Activity</h3>
               </div>
-              <div style={{ height: 260 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart cx="50%" cy="50%" outerRadius="72%" data={radarData}>
-                    <PolarGrid stroke="var(--line-strong)" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--ink-dim)', fontSize: 12, fontWeight: 600 }} />
-                    <Radar name="Reps" dataKey="A" stroke="var(--volt)" fill="var(--volt)" fillOpacity={0.25} strokeWidth={2} />
-                    <Tooltip contentStyle={{
-                      backgroundColor: 'var(--panel)', border: '1px solid var(--line-strong)',
-                      borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
-                    }} itemStyle={{ color: 'var(--ink)', fontWeight: 700 }} />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
+              <span style={{ fontSize: 12, background: 'var(--volt-dim)', color: 'var(--volt)', padding: '6px 14px', borderRadius: 999, fontWeight: 700 }}>12 Weeks</span>
             </div>
-
-            {/* Bar chart */}
-            <div className="mr-card animate-slide-up" style={{ padding: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <Activity size={18} color="var(--volt)" />
-                <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>Weekly Activity</h3>
-              </div>
-              <div style={{ height: 190 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={weeklyData} barCategoryGap="35%">
-                    <XAxis dataKey="day" stroke="var(--ink-faint)" fontSize={12} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      cursor={{ fill: 'var(--line-strong)', radius: 6 }}
-                      contentStyle={{
-                        backgroundColor: 'var(--panel)', border: '1px solid var(--line-strong)',
-                        borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
-                      }}
-                      labelStyle={{ color: 'var(--ink)', fontWeight: 700 }}
-                    />
-                    <Bar dataKey="reps" fill="url(#barGradient)" radius={[8, 8, 0, 0]} />
-                    <defs>
-                      <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%"   stopColor="#c6f135" stopOpacity={0.9} />
-                        <stop offset="100%" stopColor="#8fd400" stopOpacity={0.5} />
-                      </linearGradient>
-                    </defs>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-
-          {/* Right column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            {/* Heatmap */}
-            <div className="mr-card animate-slide-up" style={{ padding: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <Flame size={18} color="var(--volt)" />
-                  <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>Activity Heatmap</h3>
-                </div>
-                <span style={{ fontSize: 11, background: 'var(--volt-dim)', color: 'var(--volt)', padding: '4px 10px', borderRadius: 999, fontWeight: 700 }}>12 Weeks</span>
-              </div>
+            <div style={{ margin: '0 -10px' }}>
               <CalendarHeatmap
                 startDate={startDate} endDate={endDate} values={heatmapData}
                 classForValue={(v) => {
@@ -224,80 +174,146 @@ export default function Dashboard() {
                 }}
                 showWeekdayLabels={true}
               />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginTop: 10, fontSize: 11, color: 'var(--ink-dim)' }}>
-                <span>Less</span>
-                {['color-empty','color-scale-1','color-scale-2','color-scale-3','color-scale-4'].map((c, i) => (
-                  <div key={i} className="react-calendar-heatmap" style={{ display: 'inline-block' }}>
-                    <svg width="12" height="12"><rect width="12" height="12" rx="3" className={c} /></svg>
-                  </div>
-                ))}
-                <span>More</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginTop: 16, fontSize: 12, color: 'var(--ink-dim)', fontWeight: 500 }}>
+              <span>Less</span>
+              {['color-empty','color-scale-1','color-scale-2','color-scale-3','color-scale-4'].map((c, i) => (
+                <div key={i} className="react-calendar-heatmap" style={{ display: 'inline-block' }}>
+                  <svg width="14" height="14"><rect width="14" height="14" rx="3" className={c} /></svg>
+                </div>
+              ))}
+              <span>More</span>
+            </div>
+          </div>
+
+          {/* Middle Row (Charts & Radar) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24 }}>
+            {/* Bar chart */}
+            <div className="mr-card animate-slide-up" style={{ padding: '28px 32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+                <Activity size={20} color="var(--volt)" />
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>Weekly Volume</h3>
+              </div>
+              <div style={{ height: 260 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyData} barCategoryGap="25%" margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <XAxis dataKey="day" stroke="var(--ink-faint)" fontSize={13} tickLine={false} axisLine={false} dy={10} />
+                    <Tooltip
+                      cursor={{ fill: 'var(--line-strong)', radius: 8 }}
+                      contentStyle={{
+                        backgroundColor: 'var(--panel)', border: '1px solid var(--line-strong)',
+                        borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.15)', padding: '12px 16px'
+                      }}
+                      labelStyle={{ color: 'var(--ink)', fontWeight: 700, marginBottom: 4 }}
+                    />
+                    <Bar dataKey="reps" fill="url(#barGradient)" radius={[6, 6, 0, 0]} />
+                    <defs>
+                      <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%"   stopColor="var(--primary-light)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="var(--primary-dark)" stopOpacity={0.8} />
+                      </linearGradient>
+                    </defs>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
+            {/* Radar */}
+            <div className="mr-card animate-slide-up" style={{ padding: '28px 32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+                <Target size={20} color="var(--volt)" />
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>Performance Radar</h3>
+              </div>
+              <div style={{ height: 260 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                    <PolarGrid stroke="var(--line-strong)" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--ink-dim)', fontSize: 13, fontWeight: 600 }} />
+                    <Radar name="Reps" dataKey="A" stroke="var(--volt)" fill="var(--volt)" fillOpacity={0.3} strokeWidth={2} />
+                    <Tooltip contentStyle={{
+                      backgroundColor: 'var(--panel)', border: '1px solid var(--line-strong)',
+                      borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.15)'
+                    }} itemStyle={{ color: 'var(--ink)', fontWeight: 700 }} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Row (Recent Workouts & Actions) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24 }}>
             {/* Recent sessions */}
-            <div className="mr-card animate-slide-up" style={{ padding: 24, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div className="mr-card animate-slide-up" style={{ padding: '28px 32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <Dumbbell size={18} color="var(--volt)" />
-                  <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>Recent Workouts</h3>
+                  <Clock size={20} color="var(--volt)" />
+                  <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>Recent Activity</h3>
                 </div>
-                <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--volt)', fontWeight: 600 }}>
-                  View all <ChevronRight size={14} />
+                <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>
+                  View all <ChevronRight size={16} />
                 </Link>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {recentSessions.length > 0 ? recentSessions.map((s, i) => (
-                  <div key={s.id || i} className="mr-card" style={{
-                    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 14,
-                    background: 'rgba(255,255,255,0.02)', border: '1px solid var(--line)'
+                  <div key={s.id || i} style={{
+                    display: 'flex', alignItems: 'center', gap: 16, padding: '16px', borderRadius: 16,
+                    background: 'var(--bg-secondary)', border: '1px solid var(--line-light)', transition: 'transform 0.2s'
                   }}>
-                    <span style={{ fontSize: 22, flexShrink: 0 }}>{exerciseEmoji(s.exerciseType)}</span>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                      <ExerciseIcon type={s.exerciseType} size={24} />
+                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontWeight: 700, fontSize: 13, textTransform: 'capitalize' }}>{s.exerciseType || 'Workout'}</p>
-                      <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', textTransform: 'capitalize' }}>{s.exerciseType || 'Workout'}</p>
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
                         {s.correctReps} reps • {s.timestamp ? new Date(s.timestamp).toLocaleDateString() : ''}
                       </p>
                     </div>
                     {s.formScore > 0 && (
-                      <span className={`chip ${s.formScore >= 80 ? 'chip-green' : 'chip-orange'}`} style={{ fontSize: 11 }}>
-                        {s.formScore}%
+                      <span className={`chip ${s.formScore >= 80 ? 'chip-green' : 'chip-orange'}`} style={{ fontSize: 12, padding: '6px 12px' }}>
+                        {s.formScore}% Form
                       </span>
                     )}
                   </div>
                 )) : (
-                  <div className="empty-state" style={{ padding: '32px 20px' }}>
-                    <Dumbbell size={40} color="var(--text-muted)" />
-                    <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>No workouts yet</p>
-                    <Link to="/workout" className="btn-skeu btn-skeu-primary" style={{ padding: '10px 22px', fontSize: 13 }}>
+                  <div className="empty-state" style={{ padding: '40px 20px', textAlign: 'center' }}>
+                    <Dumbbell size={48} color="var(--text-muted)" style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                    <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 20 }}>No workouts recorded yet.</p>
+                    <Link to="/workout" className="mr-btn mr-btn-primary">
                       Start First Workout
                     </Link>
                   </div>
                 )}
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* ── Quick Actions ──────────────────────────────── */}
-        <div className="stagger-children" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
-          {[
-            { emoji: '💪', label: 'Push-ups',  desc: 'Upper body strength', color: '#6C5CE7' },
-            { emoji: '🦵', label: 'Squats',    desc: 'Lower body power',    color: '#00B894' },
-            { emoji: '🔥', label: 'Crunches',  desc: 'Core activation',     color: '#FD79A8' },
-            { emoji: '🧘', label: 'Plank',     desc: 'Core endurance',      color: '#FF9F43' },
-          ].map((item) => (
-            <Link key={item.label} to="/workout" className="glass-card" style={{
-              padding: '24px 20px', textDecoration: 'none', textAlign: 'center', display: 'block',
-              borderRadius: 20, cursor: 'pointer',
-              borderTop: `3px solid ${item.color}50`
-            }}>
-              <span style={{ fontSize: 40, display: 'block', marginBottom: 10 }}>{item.emoji}</span>
-              <p style={{ fontWeight: 800, fontSize: 15, marginBottom: 4, color: 'var(--text-primary)' }}>{item.label}</p>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{item.desc}</p>
-            </Link>
-          ))}
+            {/* Quick Actions / Suggested */}
+            <div className="mr-card animate-slide-up" style={{ padding: '28px 32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+                <Zap size={20} color="var(--volt)" />
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>Suggested Plans</h3>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                {[
+                  { icon: Dumbbell, label: 'Push-ups',  desc: 'Upper body', color: '#6C5CE7' },
+                  { icon: Activity, label: 'Squats',    desc: 'Lower body', color: '#00B894' },
+                  { icon: Flame,    label: 'Crunches',  desc: 'Core strength', color: '#FD79A8' },
+                  { icon: Target,   label: 'Plank',     desc: 'Endurance',  color: '#FF9F43' },
+                ].map((item) => (
+                  <Link key={item.label} to="/workout" style={{
+                    padding: '20px 16px', textDecoration: 'none', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    borderRadius: 16, cursor: 'pointer', background: 'var(--bg-secondary)', border: '1px solid var(--line-light)',
+                    transition: 'all 0.2s',
+                  }} onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)'; }}
+                     onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
+                    <item.icon size={32} color={item.color} style={{ marginBottom: 12 }} />
+                    <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, color: 'var(--text-primary)' }}>{item.label}</p>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{item.desc}</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

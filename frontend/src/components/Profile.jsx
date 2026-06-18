@@ -12,7 +12,12 @@ import AnimatedCounter from './AnimatedCounter';
 const CLOUDINARY_CLOUD  = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME  || '';
 const CLOUDINARY_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
 
-const exerciseEmoji = (t) => ({ squat: '🦵', crunch: '🔥', plank: '🧘' }[t] || '💪');
+const ExerciseIcon = ({ type, size = 24 }) => {
+  if (type === 'squat') return <Activity size={size} color="var(--volt)" />;
+  if (type === 'crunch') return <Flame size={size} color="#FD79A8" />;
+  if (type === 'plank') return <Target size={size} color="#FF9F43" />;
+  return <Dumbbell size={size} color="#6C5CE7" />;
+};
 
 export default function Profile() {
   const navigate    = useNavigate();
@@ -293,7 +298,9 @@ export default function Profile() {
                       padding: '14px 16px', borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--line)'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span style={{ fontSize: 24 }}>{exerciseEmoji(s.exerciseType)}</span>
+                        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                          <ExerciseIcon type={s.exerciseType} size={24} />
+                        </div>
                         <div>
                           <p style={{ fontWeight: 700, fontSize: 14, textTransform: 'capitalize', color: 'var(--ink)' }}>
                             {s.exerciseType || 'Workout'}

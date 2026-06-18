@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { getUserProfile } from '../db';
-import { Heart, MessageSquare, Camera, Send, Trash2, X } from 'lucide-react';
+import { Heart, MessageSquare, Camera, Send, Trash2, X, Flame, Zap, Gem, Crown } from 'lucide-react';
 import Navbar from './Navbar';
 import { useToast } from '../ToastContext';
 import { createPost, getFeedPosts, likePost, addComment, getComments } from '../communityDb';
@@ -133,10 +133,10 @@ export default function Community() {
 
   const getStreakBadges = (streak) => {
     const badges = [];
-    if (streak >= 7) badges.push({ label: '🔥 7-Day Warrior', cls: 'badge-warrior' });
-    if (streak >= 30) badges.push({ label: '⚡ 30-Day Legend', cls: 'badge-legend' });
-    if (streak >= 50) badges.push({ label: '💎 50-Day Diamond', cls: 'badge-diamond' });
-    if (streak >= 100) badges.push({ label: '👑 100-Day Crown', cls: 'badge-crown' });
+    if (streak >= 7) badges.push({ label: '7-Day Warrior', icon: Flame, cls: 'badge-warrior' });
+    if (streak >= 30) badges.push({ label: '30-Day Legend', icon: Zap, cls: 'badge-legend' });
+    if (streak >= 50) badges.push({ label: '50-Day Diamond', icon: Gem, cls: 'badge-diamond' });
+    if (streak >= 100) badges.push({ label: '100-Day Crown', icon: Crown, cls: 'badge-crown' });
     return badges;
   };
 
@@ -237,7 +237,9 @@ export default function Community() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--ink)' }}>{post.userName}</span>
                       {getStreakBadges(post.userStreak || 0).map((badge, i) => (
-                        <span key={i} className={`streak-badge ${badge.cls}`}>{badge.label}</span>
+                        <span key={i} className={`streak-badge ${badge.cls}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <badge.icon size={12} /> {badge.label}
+                        </span>
                       ))}
                     </div>
                     <p style={{ fontSize: 13, color: 'var(--ink-dim)' }}>
