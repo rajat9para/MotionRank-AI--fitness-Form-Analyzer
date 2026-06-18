@@ -33,7 +33,7 @@ function AnimatedRoutes() {
   const isLanding = location.pathname === '/';
 
   return (
-    <div key={location.pathname} className={isLanding ? '' : 'page-transition-wrapper'}>
+    <div className={isLanding ? '' : 'page-transition-wrapper'}>
       <Suspense fallback={<PageLoader />}>
         <Routes location={location}>
           <Route path="/" element={<LandingPage />} />

@@ -65,21 +65,22 @@ export default function Dashboard() {
     const unsub = auth.onAuthStateChanged(async (u) => {
       if (!u) { navigate('/'); return; }
       setUser(u);
+      setLoading(false); // Show skeleton immediately
       try {
-        const profileData = await getUserProfile(u.uid);
-        setProfile(profileData);
-        const [weekly, radar, heatmap, sessions] = await Promise.all([
+        const results = await Promise.allSettled([
+          getUserProfile(u.uid),
           getWeeklyActivity(u.uid),
           getExerciseDistribution(u.uid),
           getHeatmapData(u.uid),
           getUserSessions(u.uid),
         ]);
-        if (weekly.length > 0) setWeeklyData(weekly);
-        setRadarData(radar);
-        setHeatmapData(heatmap);
-        setRecentSessions(sessions.slice(0, 5));
+        const [profileRes, weeklyRes, radarRes, heatmapRes, sessionsRes] = results;
+        if (profileRes.status === 'fulfilled' && profileRes.value) setProfile(profileRes.value);
+        if (weeklyRes.status === 'fulfilled' && weeklyRes.value?.length > 0) setWeeklyData(weeklyRes.value);
+        if (radarRes.status === 'fulfilled') setRadarData(radarRes.value || []);
+        if (heatmapRes.status === 'fulfilled') setHeatmapData(heatmapRes.value || []);
+        if (sessionsRes.status === 'fulfilled') setRecentSessions((sessionsRes.value || []).slice(0, 5));
       } catch (e) { console.error(e); }
-      finally { setLoading(false); }
     });
     return () => unsub();
   }, [navigate]);

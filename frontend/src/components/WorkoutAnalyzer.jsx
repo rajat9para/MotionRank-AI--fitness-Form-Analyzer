@@ -36,7 +36,10 @@ export default function WorkoutAnalyzer() {
   const startTimeRef   = useRef(null);
   const isAnalyzingRef = useRef(false);
   const formScoresRef  = useRef([]);
+  const lastRepsRef    = useRef(0);
+  const lastFeedbackRef = useRef('');
   const navigate       = useNavigate();
+  const [backendReady, setBackendReady] = useState(false);
 
   const [reps,           setReps]           = useState(0);
   const [feedback,       setFeedback]       = useState('');
@@ -89,8 +92,15 @@ export default function WorkoutAnalyzer() {
     return () => clearInterval(t);
   }, [isRunning]);
 
+  // Warm up the backend on mount (Render free tier cold starts)
   useEffect(() => {
-    startCamera();
+    fetch(`${API_URL}/api/health`).then(() => setBackendReady(true)).catch(() => {
+      // Retry once after 2s
+      setTimeout(() => fetch(`${API_URL}/api/health`).then(() => setBackendReady(true)).catch(() => {}), 2000);
+    });
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       stopCamera();
@@ -127,7 +137,7 @@ export default function WorkoutAnalyzer() {
     if (!v || !c || v.readyState < 2) return null;
     c.width = 640; c.height = 480;
     c.getContext('2d').drawImage(v, 0, 0, 640, 480);
-    return c.toDataURL('image/jpeg', 0.5).split(',')[1];
+    return c.toDataURL('image/jpeg', 0.7).split(',')[1];
   };
 
   const drawSkeleton = (connections, quality) => {
@@ -214,10 +224,12 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
       if (res.ok) {
         const data = await res.json();
         formScoresRef.current.push(data.form_quality === 'good' ? 1 : 0);
-        if (data.reps > reps) {
+        if (data.reps > lastRepsRef.current) {
           voiceCoach.motivation(data.reps);
-        } else if (data.form_quality !== 'good' && data.feedback !== feedback) {
+          lastRepsRef.current = data.reps;
+        } else if (data.form_quality !== 'good' && data.feedback !== lastFeedbackRef.current) {
           voiceCoach.correction(data.feedback);
+          lastFeedbackRef.current = data.feedback;
         }
         setReps(data.reps);
         setFeedback(data.feedback);
@@ -235,6 +247,8 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
 
   const startWorkout = async () => {
     formScoresRef.current = [];
+    lastRepsRef.current = 0;
+    lastFeedbackRef.current = '';
     setHoldSeconds(0);
     setGoodFormSeconds(0);
     if (!cameraStarted) await startCamera();
@@ -404,15 +418,26 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
         </div>
 
         {/* ── Camera / Video Area ─────────────────────── */}
-        <div className="mr-card animate-slide-up" style={{ overflow: 'hidden', position: 'relative', borderRadius: 26, aspectRatio: '16/9.5', background: 'var(--panel)', border: '1px solid var(--line)' }}>
-          {!cameraStarted ? (
+        <div className="mr-card animate-slide-up" style={{ overflow: 'hidden', position: 'relative', borderRadius: 26, aspectRatio: '16/9.5', background: '#0a0a0d', border: '1px solid var(--line)' }}>
+          {/* Video + Overlay are ALWAYS in the DOM */}
+          <video ref={videoRef} autoPlay playsInline muted style={{
+            width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)',
+            display: cameraStarted ? 'block' : 'none'
+          }} />
+          <canvas ref={overlayRef} style={{
+            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+            pointerEvents: 'none', zIndex: 2,
+            display: cameraStarted ? 'block' : 'none'
+          }} />
+
+          {/* Placeholder (shown when camera is off) */}
+          {!cameraStarted && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 380, padding: 40, textAlign: 'center' }}>
               <div style={{
                 width: 90, height: 90, borderRadius: '50%', marginBottom: 28,
                 background: `linear-gradient(135deg, ${currentEx.color}25, ${currentEx.color}08)`,
                 border: `2px solid ${currentEx.color}35`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                animation: 'glow 2s ease-in-out infinite',
                 boxShadow: `0 0 30px ${currentEx.color}20`
               }}>
                 <Camera size={38} color={currentEx.color} />
@@ -420,9 +445,15 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
               <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 10, fontFamily: "'Outfit', sans-serif", color: 'var(--ink)' }}>
                 Ready for {currentEx.label}?
               </h2>
-              <p style={{ color: 'var(--ink-dim)', marginBottom: 32, maxWidth: 420, lineHeight: 1.65, fontSize: 15 }}>
+              <p style={{ color: 'var(--ink-dim)', marginBottom: 12, maxWidth: 420, lineHeight: 1.65, fontSize: 15 }}>
                 {currentEx.tip}. AI tracks your form in real-time — green skeleton means great form, red means fix it.
               </p>
+              {!backendReady && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, padding: '8px 16px', borderRadius: 12, background: 'rgba(253,203,110,0.15)', border: '1px solid rgba(253,203,110,0.3)' }}>
+                  <div className="loading-spinner" style={{ width: 14, height: 14, borderWidth: 2, borderColor: '#FDCB6E', borderTopColor: 'transparent' }} />
+                  <span style={{ fontSize: 13, color: '#FDCB6E', fontWeight: 700 }}>Warming up AI backend…</span>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
                 <button className="mr-btn mr-btn-primary" onClick={startWorkout}
                   style={{ fontSize: 16, padding: '14px 32px' }} id="start-camera-btn" disabled={cameraLoading}>
@@ -449,11 +480,11 @@ Be direct, energetic, like a real coach. No intro, just the sentence.`;
                 ))}
               </div>
             </div>
-          ) : (
-            <>
-              <video ref={videoRef} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', display: 'block' }} />
-              <canvas ref={overlayRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 2 }} />
+          )}
 
+          {/* HUD overlays (shown when camera is active) */}
+          {cameraStarted && (
+            <>
               {/* Countdown */}
               {countdown !== null && (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)', zIndex: 10 }}>

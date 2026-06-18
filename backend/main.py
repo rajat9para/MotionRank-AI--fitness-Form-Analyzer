@@ -67,6 +67,11 @@ from analyzer import PushUpAnalyzer, SquatAnalyzer, CrunchAnalyzer, PlankAnalyze
 
 analyzers = {}
 
+# ─── Health Check (keeps Render awake / warm-up ping) ────────────────────────
+@app.get("/api/health")
+async def health():
+    return {"status": "ok", "ts": datetime.utcnow().isoformat()}
+
 # ─── Request / Response Models ───────────────────────────────────────────────
 class AnalyzeRequest(BaseModel):
     frame: str
