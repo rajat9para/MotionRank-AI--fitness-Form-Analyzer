@@ -8,3 +8,5 @@ pydantic
 python-multipart
 python-dotenv
 cloudinary
+motor
+pymongo

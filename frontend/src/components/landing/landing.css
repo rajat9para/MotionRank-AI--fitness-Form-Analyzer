@@ -3,7 +3,7 @@
    Scoped under .mr-cine to avoid clashing with the authenticated app styles.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-.mr-cine {
+.mr-cine, .mr-force-dark {
   --void: #050506;
   --void-2: #0a0a0d;
   --panel: #0e0e12;
@@ -24,6 +24,21 @@
   position: relative;
   overflow-x: hidden;
   min-height: 100vh;
+}
+
+html:not(.dark) .mr-cine:not(.mr-force-dark) {
+  --void: #f4f4f0;
+  --void-2: #ffffff;
+  --panel: #ffffff;
+  --line: rgba(0, 0, 0, 0.08);
+  --line-strong: rgba(0, 0, 0, 0.16);
+  --volt: #a4ce00;
+  --volt-soft: #b8e600;
+  --volt-dim: rgba(164, 206, 0, 0.14);
+  --ink: #050506;
+  --ink-dim: #6d6d68;
+  --ink-faint: #a7a7a0;
+  --grad-volt: linear-gradient(135deg, #b8e600 0%, #8fd400 100%);
 }
 
 .mr-cine h1, .mr-cine h2, .mr-cine h3, .mr-cine h4 {
@@ -153,7 +168,8 @@
   border-bottom: 1px solid transparent;
 }
 .mr-nav.scrolled {
-  background: rgba(5,5,6,0.7);
+  background: var(--void-2);
+  opacity: 0.95;
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border-bottom-color: var(--line);
@@ -216,8 +232,8 @@
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  opacity: 0.5;
-  background-image: radial-gradient(rgba(255,255,255,0.025) 1px, transparent 1px);
+  opacity: 0.3;
+  background-image: radial-gradient(var(--ink) 1px, transparent 1px);
   background-size: 3px 3px;
   mix-blend-mode: overlay;
 }
@@ -243,7 +259,7 @@
   inset: 0;
   z-index: 1;
   background:
-    linear-gradient(90deg, rgba(5,5,6,0.96) 0%, rgba(5,5,6,0.7) 45%, rgba(5,5,6,0.35) 100%),
+    linear-gradient(90deg, var(--void) 0%, rgba(5,5,6,0.7) 45%, rgba(5,5,6,0.35) 100%),
     linear-gradient(0deg, var(--void) 2%, transparent 35%);
 }
 .mr-hero-canvas {

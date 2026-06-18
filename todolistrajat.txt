@@ -1,0 +1,286 @@
+================================================================================
+  MOTIONRANK AI — COMPLETE SETUP & TODO LIST FOR RAJAT
+  Step-by-step guide for keys, settings, and what to configure
+================================================================================
+
+Last Updated: June 2026
+
+================================================================================
+1. ENVIRONMENT VARIABLES — WHERE TO ADD KEYS
+================================================================================
+
+── FRONTEND (.env file in /frontend/) ──────────────────────────────────────────
+
+Create or update: frontend/.env
+
+  # Firebase Auth (you already have these)
+  VITE_FIREBASE_API_KEY=your_firebase_api_key
+  VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+  VITE_FIREBASE_PROJECT_ID=your_project_id
+  VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+  VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+  VITE_FIREBASE_APP_ID=your_app_id
+
+  # Cloudinary (for profile pics + community photos)
+  VITE_CLOUDINARY_CLOUD_NAME=your_cloud_name
+  VITE_CLOUDINARY_UPLOAD_PRESET=your_unsigned_upload_preset
+
+  # Backend URL (your Render deployment)
+  VITE_API_URL=https://your-backend.onrender.com
+
+  # Gemini AI Key (optional — for AI coaching insights)
+  VITE_GEMINI_API_KEY=your_gemini_api_key
+
+── BACKEND (.env file in /backend/) ────────────────────────────────────────────
+
+Create or update: backend/.env
+
+  # Frontend URL for CORS
+  FRONTEND_URL=https://your-app.vercel.app
+
+  # Cloudinary (for server-side uploads)
+  CLOUDINARY_CLOUD_NAME=your_cloud_name
+  CLOUDINARY_API_KEY=your_api_key
+  CLOUDINARY_API_SECRET=your_api_secret
+
+  # MongoDB Atlas (NEW — for workout data)
+  MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/motionrank?retryWrites=true&w=majority
+
+── VERCEL ENVIRONMENT VARIABLES ────────────────────────────────────────────────
+
+Go to: https://vercel.com/your-project/settings/environment-variables
+Add ALL the VITE_ prefixed variables from the frontend .env above.
+
+── RENDER ENVIRONMENT VARIABLES ────────────────────────────────────────────────
+
+Go to: https://dashboard.render.com → your backend service → Environment
+Add ALL the variables from the backend .env above.
+
+
+================================================================================
+2. CLOUDINARY SETUP (For Community Photos + Badges)
+================================================================================
+
+Step 1: Go to https://cloudinary.com → Sign in (or create free account)
+Step 2: Dashboard → Copy your "Cloud Name"
+Step 3: Settings → Upload → Add upload preset:
+        - Name: "motionrank_unsigned"
+        - Signing mode: "Unsigned"  ← IMPORTANT (allows frontend uploads without API secret)
+        - Folder: "community_posts"
+        - Allowed formats: jpg, png, webp, gif
+        - Max file size: 10MB
+        - Transformations: width 1200, quality auto
+Step 4: Save and use "motionrank_unsigned" as VITE_CLOUDINARY_UPLOAD_PRESET
+Step 5: For badges, upload badge images to folder "badges/" in Cloudinary:
+        - badges/7_day_warrior.png
+        - badges/30_day_legend.png
+        - badges/50_day_diamond.png
+        - badges/100_day_crown.png
+        (I will generate these badge images for you)
+
+
+================================================================================
+3. MONGODB ATLAS SETUP (For Workout Data + Admin)
+================================================================================
+
+Step 1: Go to https://www.mongodb.com/atlas → Create free account
+Step 2: Create a FREE cluster (M0 tier — 512MB, free forever)
+        - Provider: AWS
+        - Region: ap-south-1 (Mumbai) ← closest to India
+        - Cluster name: "motionrank-cluster"
+Step 3: Security → Database Access → Add Database User:
+        - Username: motionrank_app
+        - Password: (generate strong password, SAVE IT)
+        - Role: "Read and Write to any database"
+Step 4: Security → Network Access → Add IP Address:
+        - Click "Allow Access from Anywhere" (0.0.0.0/0)
+        - This is needed for Render to connect
+Step 5: Deployment → Database → Connect → Drivers:
+        - Copy the connection string
+        - Replace <password> with your actual password
+        - Replace <dbname> with "motionrank"
+        - This is your MONGODB_URI
+Step 6: The following collections will be auto-created:
+        - workouts     → individual workout sessions
+        - records      → personal bests per exercise
+        - user_stats   → aggregated stats
+        - community    → community posts
+        - admin        → announcements, challenges
+        - bug_reports  → user-submitted bugs
+
+
+================================================================================
+4. FIREBASE SETTINGS TO CHECK/UPDATE
+================================================================================
+
+── Firestore Security Rules ────────────────────────────────────────────────────
+
+Go to: Firebase Console → Firestore → Rules
+Make sure these collections are properly secured:
+
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      // Users can read/write their own profile
+      match /users/{userId} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+      // Sessions — users can read their own, write their own
+      match /sessions/{sessionId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null;
+      }
+      // Community posts — any authenticated user can read/write
+      match /community_posts/{postId} {
+        allow read: if true;
+        allow write: if request.auth != null;
+      }
+      // Friend requests
+      match /friend_requests/{reqId} {
+        allow read, write: if request.auth != null;
+      }
+      // Bug reports — any authenticated user can create
+      match /bug_reports/{reportId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null;
+      }
+      // Announcements — anyone can read, only admin can write
+      match /announcements/{annoId} {
+        allow read: if true;
+        allow write: if request.auth != null;
+      }
+    }
+  }
+
+── Firebase Auth Settings ──────────────────────────────────────────────────────
+
+Go to: Firebase Console → Authentication → Settings → Authorized domains
+Make sure your Vercel domain is listed:
+  - your-app.vercel.app
+  - localhost (for development)
+
+── Admin User Setup ────────────────────────────────────────────────────────────
+
+Option A (Simple — Email whitelist):
+  I will add your email as admin in the code. Tell me your email.
+
+Option B (Firebase Custom Claims — more secure):
+  Run this in Firebase Admin SDK or Cloud Functions:
+    admin.auth().setCustomUserClaims(uid, { admin: true })
+
+
+================================================================================
+5. UPTIMEROBOT CONFIGURATION
+================================================================================
+
+Step 1: Go to https://uptimerobot.com → your monitor
+Step 2: Settings:
+        - URL: https://your-backend.onrender.com/health
+        - Monitoring Interval: 4 minutes  ← (changed from 5)
+        - Alert contacts: your email
+Step 3: This keeps Render backend warm and prevents cold starts
+
+
+================================================================================
+6. WHAT I (AI) WILL BUILD — EXECUTION ORDER
+================================================================================
+
+Phase 1: UI/Theme Unification
+  [  ] Restyle index.css with cinematic dark theme variables
+  [  ] Add animated theme slider to Navbar
+  [  ] Restyle Dashboard, Profile, Leaderboard, Friends, Auth pages
+  [  ] Add text entrance animations matching landing page
+
+Phase 2: Plank Exercise + Camera Fix
+  [  ] Add PlankAnalyzer class in backend/analyzer.py
+  [  ] Register plank in main.py
+  [  ] Add Plank to frontend exercise list
+  [  ] Fix camera opening flow
+  [  ] Enhance skeleton overlay visibility
+  [  ] Add total reps, good reps, time to HUD
+
+Phase 3: Community Section
+  [  ] Create Community.jsx page
+  [  ] Create communityDb.js for Firestore operations
+  [  ] Photo upload with Cloudinary (max 5 per post)
+  [  ] Streak badges display
+  [  ] Like/comment system
+  [  ] Add to Navbar + routes
+
+Phase 4: MongoDB Integration
+  [  ] Create database.py with motor async driver
+  [  ] Create models.py with Pydantic schemas
+  [  ] Add workout save/history/records API endpoints
+  [  ] Update requirements.txt
+  [  ] Update .env.example
+
+Phase 5: Admin Dashboard
+  [  ] Create Admin.jsx with full dashboard
+  [  ] Create adminDb.js for admin Firestore ops
+  [  ] Create BugReport.jsx for user submissions
+  [  ] User management (search, ban, message)
+  [  ] Announcements + challenges
+  [  ] Bug report viewing + resolution
+  [  ] Add admin route + navbar link
+
+Phase 6: Custom AI Models (LATER — after you train & provide models)
+  [  ] Create ml_analyzer.py to load your custom models
+  [  ] Swap rule-based analyzers for ML-based classifiers
+  [  ] Deploy updated backend to Render
+
+
+================================================================================
+7. WHAT YOU (RAJAT) NEED TO DO — YOUR ACTION ITEMS
+================================================================================
+
+BEFORE I START CODING:
+  1. [ ] Answer the 3 open questions in the implementation plan
+  2. [ ] Tell me your admin email address
+
+AFTER I FINISH CODING:
+  3. [ ] Create MongoDB Atlas cluster (see Section 3 above)
+  4. [ ] Get your MONGODB_URI connection string
+  5. [ ] Create Cloudinary unsigned upload preset (see Section 2 above)
+  6. [ ] Add all environment variables to Vercel (see Section 1)
+  7. [ ] Add all environment variables to Render (see Section 1)
+  8. [ ] Update Firestore security rules (see Section 4)
+  9. [ ] Verify your Vercel domain is in Firebase authorized domains
+  10. [ ] Change UptimeRobot interval to 4 minutes (see Section 5)
+  11. [ ] Run: cd frontend && npm run build (verify build succeeds)
+  12. [ ] Run: git add . && git commit -m "feat: major update" && git push
+  13. [ ] Verify Vercel auto-deploys
+  14. [ ] Manually redeploy on Render (or it auto-deploys if connected to GitHub)
+  15. [ ] Test: Login → Dashboard → Start Workout → Community → Admin
+
+FOR CUSTOM AI MODELS (LATER):
+  16. [ ] Train your models using makedataset.py data
+  17. [ ] Save trained models as .tflite or .pkl files
+  18. [ ] Place models in ML/models/ folder
+  19. [ ] Tell me when ready — I'll integrate them into the backend
+
+
+================================================================================
+8. DEPLOYMENT CHECKLIST
+================================================================================
+
+  [ ] Frontend builds without errors: npm run build
+  [ ] All VITE_ env vars set in Vercel
+  [ ] All backend env vars set in Render
+  [ ] MongoDB Atlas cluster created + connection works
+  [ ] Cloudinary upload preset configured
+  [ ] Firebase authorized domains include Vercel URL
+  [ ] UptimeRobot pinging /health every 4 minutes
+  [ ] Admin email configured in code
+  [ ] Git push triggers auto-deploy on Vercel
+  [ ] Render redeploy successful
+  [ ] Test login flow (Google + email)
+  [ ] Test workout camera + all 4 exercises
+  [ ] Test community post creation + photo upload
+  [ ] Test admin panel access
+  [ ] Test bug report submission
+
+
+================================================================================
+  END OF TODO LIST — LET'S BUILD THIS MASTERPIECE! 🚀
+================================================================================

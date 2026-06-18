@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, Play } from 'lucide-react';
 
+// Lazy-load the heavy Three.js 3D scene (~880KB) — only downloads when Hero mounts
+const HeroScene = lazy(() => import('./HeroScene'));
+
 const HEADLINES = [
   'STAY HARD.',
   'NO EXCUSES.',

@@ -59,7 +59,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="mr-cine">
+    <div className="mr-cine mr-force-dark">
       {/* Grain overlay */}
       <div className="mr-grain" />
 

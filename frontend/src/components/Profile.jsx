@@ -3,17 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { updateProfile } from 'firebase/auth';
 import { getUserProfile, saveUserProfile, getUserSessions } from '../db';
-import { Activity, Camera, Save, Trophy, Flame, Calendar, Dumbbell, Key, Eye, EyeOff, Check, TrendingUp } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, CartesianGrid } from 'recharts';
+import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Activity, Camera, Save, Trophy, Flame, Calendar, Dumbbell, Key, Eye, EyeOff, Check, ChevronRight } from 'lucide-react';
 import Navbar from './Navbar';
-import AnimatedCounter from './AnimatedCounter';
-import EmptyState, { EmptyWorkouts } from './EmptyState';
 import { useToast } from '../ToastContext';
+import AnimatedCounter from './AnimatedCounter';
 
 const CLOUDINARY_CLOUD  = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME  || '';
 const CLOUDINARY_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
 
-const exerciseEmoji = (t) => ({ squat: '🦵', crunch: '🔥' }[t] || '💪');
+const exerciseEmoji = (t) => ({ squat: '🦵', crunch: '🔥', plank: '🧘' }[t] || '💪');
 
 export default function Profile() {
   const navigate    = useNavigate();
@@ -24,12 +23,11 @@ export default function Profile() {
   const [displayName, setDisplayName] = useState('');
   const [photoURL,    setPhotoURL]    = useState('');
   const [sessions,    setSessions]    = useState([]);
-  const [formTrend,   setFormTrend]   = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [saving,      setSaving]      = useState(false);
   const [uploading,   setUploading]   = useState(false);
+  const [formTrend,   setFormTrend]   = useState([]);
 
-  // LLM API key state (stored locally only — never sent to backend)
   const [apiKey,       setApiKey]      = useState(() => localStorage.getItem('mr_llm_key') || '');
   const [showApiKey,   setShowApiKey]  = useState(false);
   const [apiKeySaved,  setApiKeySaved] = useState(false);
@@ -45,17 +43,16 @@ export default function Profile() {
         setPhotoURL(pd?.photoURL || u.photoURL || '');
         const s = await getUserSessions(u.uid);
         setSessions(s);
-        const trend = s
-          .filter((sess) => sess.formScore > 0)
+        const trendData = s
+          .filter(sess => sess.formScore > 0)
           .slice(0, 20)
           .reverse()
-          .map((sess) => ({
+          .map((sess, i) => ({
+            session: `#${i + 1}`,
             score: sess.formScore,
-            date: sess.timestamp
-              ? new Date(sess.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-              : '',
+            date: sess.timestamp ? new Date(sess.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
           }));
-        setFormTrend(trend);
+        setFormTrend(trendData);
       } catch (e) { console.error(e); }
       finally { setLoading(false); }
     });
@@ -97,6 +94,7 @@ export default function Profile() {
   const handleSaveApiKey = () => {
     localStorage.setItem('mr_llm_key', apiKey);
     setApiKeySaved(true);
+    addToast('API key saved locally!', 'success');
     setTimeout(() => setApiKeySaved(false), 2500);
   };
 
@@ -114,49 +112,47 @@ export default function Profile() {
   );
 
   return (
-    <div className="page-wrapper">
+    <div className="page-wrapper mr-cine" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Navbar />
-      <div className="bg-blob" style={{ top: '-50px', left: '20%', width: 400, height: 400, background: '#6C5CE7', opacity: 0.1 }} />
-      <div className="bg-blob" style={{ bottom: '5%', right: '10%', width: 300, height: 300, background: '#FD79A8', opacity: 0.08, animationDelay: '-10s' }} />
+      <div className="mr-grain" />
+      <div className="bg-blob" style={{ top: '-50px', left: '20%', width: 400, height: 400, background: 'var(--volt)', opacity: 0.15, filter: 'blur(100px)' }} />
+      <div className="bg-blob" style={{ bottom: '5%', right: '10%', width: 300, height: 300, background: 'rgba(108, 92, 231, 0.25)', opacity: 0.15, animationDelay: '-10s', filter: 'blur(120px)' }} />
 
-      <div className="main-content" style={{ maxWidth: 1000 }}>
-        {/* Header */}
-        <div className="animate-slide-down" style={{ marginBottom: 32 }}>
-          <h1 className="section-title" style={{ fontSize: 34, marginBottom: 4 }}>Your Profile</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Manage your account, settings, and view history</p>
+      <div className="main-content" style={{ maxWidth: 1000, position: 'relative', zIndex: 2 }}>
+        <div className="animate-slide-down" style={{ marginBottom: 40 }}>
+          <div className="mr-eyebrow" style={{ marginBottom: 12 }}>YOUR PROFILE</div>
+          <h1 className="section-title" style={{ fontSize: 44, marginBottom: 8, color: 'var(--ink)' }}>Profile</h1>
+          <p style={{ color: 'var(--ink-dim)', fontSize: 15 }}>Manage your account, settings, and view history</p>
         </div>
 
         <div className="profile-grid">
-          {/* ── Left: profile card ─────────────────── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             {/* Avatar + name card */}
-            <div className="glass-card-strong animate-slide-up" style={{ padding: 32, textAlign: 'center' }}>
-              {/* Avatar */}
-              <div style={{ position: 'relative', width: 116, height: 116, margin: '0 auto 20px' }}>
+            <div className="mr-card animate-slide-up" style={{ padding: 36, textAlign: 'center' }}>
+              <div style={{ position: 'relative', width: 116, height: 116, margin: '0 auto 24px' }}>
                 <div style={{
                   width: 116, height: 116, borderRadius: '50%', overflow: 'hidden',
-                  border: '3px solid var(--primary-light)',
-                  boxShadow: '0 0 36px rgba(108,92,231,0.22)'
+                  border: '3px solid var(--volt)',
+                  boxShadow: '0 0 36px rgba(198,241,53,0.3)'
                 }}>
                   {photoURL ? (
                     <img src={photoURL} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <div style={{
                       width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'linear-gradient(135deg, var(--primary), var(--accent-pink))',
-                      fontSize: 40, fontWeight: 900, color: 'white', fontFamily: "'Outfit', sans-serif"
+                      background: 'var(--grad-volt)',
+                      fontSize: 40, fontWeight: 900, color: '#0a0a0d', fontFamily: "'Outfit', sans-serif"
                     }}>
                       {displayName?.[0]?.toUpperCase() || '?'}
                     </div>
                   )}
                 </div>
                 <button onClick={() => fileRef.current?.click()} disabled={uploading}
-                  className="btn-skeu btn-skeu-primary"
-                  style={{ position: 'absolute', bottom: -4, right: -4, width: 36, height: 36, borderRadius: '50%', padding: 0, minWidth: 'unset' }}
+                  className="mr-btn mr-btn-primary"
+                  style={{ position: 'absolute', bottom: -4, right: -4, width: 36, height: 36, borderRadius: '50%', padding: 0, minWidth: 'unset', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}
                   id="upload-photo-btn">
                   {uploading
-                    ? <div className="loading-spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+                    ? <div className="loading-spinner" style={{ width: 16, height: 16, borderWidth: 2, borderColor: '#0a0a0d', borderTopColor: 'transparent' }} />
                     : <Camera size={15} />}
                 </button>
                 <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoUpload}
@@ -165,187 +161,152 @@ export default function Profile() {
 
               <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)}
                 className="input-glass" placeholder="Your Name" id="profile-name-input"
-                style={{ textAlign: 'center', fontSize: 17, fontWeight: 800, marginBottom: 6 }} />
-              <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>{user?.email}</p>
+                style={{ textAlign: 'center', fontSize: 18, fontWeight: 800, marginBottom: 8, color: 'var(--ink)' }} />
+              <p style={{ color: 'var(--ink-dim)', fontSize: 13, marginBottom: 24 }}>{user?.email}</p>
 
-              <button onClick={handleSave} disabled={saving} className="btn-skeu btn-skeu-primary"
-                style={{ width: '100%', padding: '12px' }} id="save-profile-btn">
-                <Save size={15} /> {saving ? 'Saving…' : 'Save Profile'}
+              <button onClick={handleSave} disabled={saving} className="mr-btn mr-btn-primary"
+                style={{ width: '100%', padding: '14px' }} id="save-profile-btn">
+                <Save size={16} /> {saving ? 'Saving…' : 'Save Profile'}
               </button>
 
               {streak > 0 && (
                 <div style={{
                   marginTop: 18, padding: '10px 14px', borderRadius: 12,
-                  background: 'rgba(253,121,168,0.08)', border: '1px solid rgba(253,121,168,0.2)',
+                  background: 'rgba(198,241,53,0.08)', border: '1px solid rgba(198,241,53,0.2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
                 }}>
-                  <Flame size={17} color="#FD79A8" />
-                  <span style={{ fontWeight: 700, color: '#FD79A8', fontSize: 14 }}>{streak} Day Streak 🔥</span>
+                  <Flame size={17} color="var(--volt)" />
+                  <span style={{ fontWeight: 700, color: 'var(--volt)', fontSize: 14 }}>{streak} Day Streak</span>
                 </div>
               )}
             </div>
 
-            {/* ── LLM API Key Card ─────────────────── */}
-            <div className="glass-card-strong animate-slide-up" style={{ padding: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                <div style={{ padding: 8, borderRadius: 10, background: 'rgba(108,92,231,0.1)', display: 'flex' }}>
-                  <Key size={16} color="var(--primary)" />
+            {/* LLM API Key Card */}
+            <div className="mr-card animate-slide-up" style={{ padding: 28 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                <div style={{ padding: 10, borderRadius: 12, background: 'var(--volt-dim)', display: 'flex' }}>
+                  <Key size={18} color="var(--volt)" />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: 15, fontWeight: 800 }}>LLM API Key</h3>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>For AI insights & feedback</p>
+                  <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--ink)' }}>LLM API Key</h3>
+                  <p style={{ fontSize: 12, color: 'var(--ink-dim)' }}>For AI insights & feedback</p>
                 </div>
               </div>
 
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 14 }}>
-                Paste your Gemini or OpenAI key below. It's stored only in your browser — never sent to any server.
+              <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.6, marginBottom: 16 }}>
+                Paste your Gemini key below. It's stored only in your browser — never sent to any server.
               </p>
 
-              <div style={{ position: 'relative', marginBottom: 10 }}>
+              <div style={{ position: 'relative', marginBottom: 12 }}>
                 <input
                   type={showApiKey ? 'text' : 'password'}
-                  placeholder="sk-... or AIza..."
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   className="input-glass"
-                  style={{ paddingRight: 44, fontSize: 13 }}
-                  id="llm-api-key-input"
+                  placeholder="AIzaSy..."
+                  style={{ paddingRight: 48, fontSize: 14 }}
+                  id="api-key-input"
                 />
-                <button onClick={() => setShowApiKey(!showApiKey)} type="button"
-                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                <button
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  style={{
+                    position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-faint)', padding: 4
+                  }}
+                >
                   {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
 
-              <button onClick={handleSaveApiKey} className="btn-skeu btn-skeu-secondary"
-                style={{ width: '100%', padding: '10px', fontSize: 13 }} id="save-api-key-btn">
-                {apiKeySaved ? <><Check size={14} color="var(--accent-green)" /> Saved!</> : <><Key size={14} /> Save Key Locally</>}
+              <button
+                onClick={handleSaveApiKey}
+                className={`mr-btn ${apiKeySaved ? 'mr-btn-ghost' : 'mr-btn-ghost'}`}
+                style={{
+                  width: '100%', padding: '12px',
+                  border: apiKeySaved ? '1px solid var(--volt)' : '1px solid var(--line-strong)',
+                  color: apiKeySaved ? 'var(--volt)' : 'var(--ink)'
+                }}
+                id="save-api-key-btn"
+              >
+                {apiKeySaved ? <><Check size={16} /> Saved</> : <><Save size={16} /> Save Key</>}
               </button>
-
+              
               {apiKey && (
-                <div className="chip chip-green" style={{ marginTop: 10, width: '100%', justifyContent: 'center' }}>
+                <div className="chip chip-volt" style={{ marginTop: 10, width: '100%', justifyContent: 'center' }}>
                   <Check size={12} /> Key configured
                 </div>
               )}
             </div>
           </div>
 
-          {/* ── Right: stats + history ──────────────── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-
             {/* Stats */}
-            <div className="stagger-children" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            <div className="stagger-children" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
-                { icon: Activity, label: 'Total Reps',    value: <AnimatedCounter value={totalReps} />, color: '#6C5CE7' },
-                { icon: Flame,    label: 'Active Min',    value: totalMinutes ? <AnimatedCounter value={totalMinutes} /> : '—', color: '#FD79A8' },
-                { icon: Trophy,   label: 'Sessions',      value: <AnimatedCounter value={sessions.length} />, color: '#FDCB6E' },
+                { icon: Activity, label: 'Total Reps',    value: totalReps, color: 'var(--volt)' },
+                { icon: Flame,    label: 'Active Min',    value: totalMinutes || 0,         color: '#FD79A8' },
+                { icon: Trophy,   label: 'Sessions',      value: sessions.length,             color: '#FDCB6E' },
               ].map(({ icon: Icon, label, value, color }) => (
-                <div key={label} className="glass-card" style={{ padding: '20px 16px', textAlign: 'center' }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 12, background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', border: `1px solid ${color}20` }}>
+                <div key={label} className="mr-card" style={{ padding: '24px 16px', textAlign: 'center' }}>
+                  <div style={{ width: 42, height: 42, borderRadius: 12, background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', border: `1px solid ${color}20` }}>
                     <Icon size={20} color={color} />
                   </div>
-                  <p style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Outfit', sans-serif", marginBottom: 2 }}>{value}</p>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: 0.5 }}>{label}</p>
+                  <p style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Outfit', sans-serif", marginBottom: 4, color: 'var(--ink)' }}>
+                    <AnimatedCounter value={value} />
+                  </p>
+                  <p style={{ fontSize: 11, color: 'var(--ink-dim)', fontWeight: 600, letterSpacing: 0.5 }}>{label}</p>
                 </div>
               ))}
             </div>
 
-            {/* Form Trend */}
-            {formTrend.length > 1 && (() => {
-              const scores = formTrend.map((d) => d.score);
-              const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-              const best = Math.max(...scores);
-              const latest = scores[scores.length - 1];
-              const delta = latest - scores[0];
-              return (
-              <div className="glass-card-strong animate-slide-up" style={{ padding: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <TrendingUp size={17} color="var(--accent-green)" />
-                    <h3 style={{ fontSize: 17, fontWeight: 700 }}>Form Trend</h3>
-                  </div>
-                  <span className={`chip ${delta >= 0 ? 'chip-green' : 'chip-orange'}`} style={{ fontSize: 11 }}>
-                    {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}% since start
-                  </span>
-                </div>
-
-                {/* Summary stats */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 18 }}>
-                  {[
-                    { label: 'Latest', value: latest, color: 'var(--primary)' },
-                    { label: 'Average', value: avg, color: 'var(--accent-pink)' },
-                    { label: 'Best', value: best, color: 'var(--accent-green)' },
-                  ].map((s) => (
-                    <div key={s.label} style={{ textAlign: 'center', padding: '10px 6px', borderRadius: 12, background: 'var(--glass-bg)', border: '1px solid var(--border-color)' }}>
-                      <p style={{ fontSize: 22, fontWeight: 900, fontFamily: "'Outfit', sans-serif", color: s.color, lineHeight: 1 }}>{s.value}%</p>
-                      <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 4 }}>{s.label}</p>
-                    </div>
-                  ))}
-                </div>
-
+            {/* Form Score Trend */}
+            {formTrend.length > 1 && (
+              <div className="mr-card animate-slide-up" style={{ padding: 24 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: 'var(--ink)' }}>Form Trend</h3>
                 <div style={{ height: 200 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={formTrend} margin={{ top: 5, right: 8, bottom: 5, left: -16 }}>
-                      <defs>
-                        <linearGradient id="formGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#6C5CE7" stopOpacity={0.45} />
-                          <stop offset="100%" stopColor="#6C5CE7" stopOpacity={0.02} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
-                      <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
-                      <YAxis domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                          borderRadius: 12, backdropFilter: 'blur(12px)', boxShadow: 'var(--shadow-md)'
-                        }}
-                        labelStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
-                        formatter={(v) => [`${v}%`, 'Form']}
-                      />
-                      <ReferenceLine y={avg} stroke="var(--accent-pink)" strokeDasharray="5 4" strokeOpacity={0.7}
-                        label={{ value: `avg ${avg}%`, fill: 'var(--accent-pink)', fontSize: 10, fontWeight: 700, position: 'insideTopRight' }} />
-                      <Area type="monotone" dataKey="score" stroke="#6C5CE7" strokeWidth={3}
-                        fill="url(#formGradient)" dot={{ fill: '#6C5CE7', strokeWidth: 2, r: 3 }} activeDot={{ r: 6 }} />
-                    </AreaChart>
+                  <ResponsiveContainer>
+                    <LineChart data={formTrend} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
+                      <XAxis dataKey="date" stroke="var(--ink-faint)" fontSize={11} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--panel)', border: '1px solid var(--line-strong)', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: 'var(--ink)', fontWeight: 700 }} />
+                      <Line type="monotone" dataKey="score" stroke="var(--volt)" strokeWidth={3} dot={{ fill: 'var(--volt)', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                    </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
-              );
-            })()}
+            )}
 
             {/* Workout History */}
-            <div className="glass-card animate-slide-up" style={{ padding: 24, flex: 1 }}>
+            <div className="mr-card animate-slide-up" style={{ padding: 24, flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <Calendar size={17} color="var(--primary)" />
-                  <h3 style={{ fontSize: 17, fontWeight: 700 }}>Workout History</h3>
+                  <Calendar size={18} color="var(--volt)" />
+                  <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>Workout History</h3>
                 </div>
-                <span className="chip chip-primary" style={{ fontSize: 11 }}>{sessions.length} total</span>
+                <span style={{ fontSize: 11, background: 'var(--volt-dim)', color: 'var(--volt)', padding: '4px 10px', borderRadius: 999, fontWeight: 700 }}>{sessions.length} total</span>
               </div>
 
               {sessions.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 420, overflowY: 'auto', paddingRight: 6 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 420, overflowY: 'auto', paddingRight: 6 }}>
                   {sessions.map((s, i) => (
-                    <div key={s.id || i} className="glass-card" style={{
+                    <div key={s.id || i} className="mr-card" style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '12px 16px', borderRadius: 12
+                      padding: '14px 16px', borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--line)'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span style={{ fontSize: 22 }}>{exerciseEmoji(s.exerciseType)}</span>
+                        <span style={{ fontSize: 24 }}>{exerciseEmoji(s.exerciseType)}</span>
                         <div>
-                          <p style={{ fontWeight: 700, fontSize: 13, textTransform: 'capitalize' }}>
+                          <p style={{ fontWeight: 700, fontSize: 14, textTransform: 'capitalize', color: 'var(--ink)' }}>
                             {s.exerciseType || 'Workout'}
                           </p>
-                          <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                          <p style={{ fontSize: 12, color: 'var(--ink-dim)' }}>
                             {s.timestamp ? new Date(s.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
                           </p>
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontWeight: 800, color: 'var(--primary)', fontSize: 14 }}>{s.correctReps} reps</p>
+                        <p style={{ fontWeight: 800, color: 'var(--volt)', fontSize: 15 }}>{s.correctReps} reps</p>
                         {s.formScore > 0 && (
-                          <span className={`chip ${s.formScore >= 80 ? 'chip-green' : 'chip-orange'}`} style={{ fontSize: 10 }}>
+                          <span style={{ fontSize: 11, color: s.formScore >= 80 ? '#00B894' : '#FDCB6E', fontWeight: 600 }}>
                             {s.formScore}% form
                           </span>
                         )}
@@ -354,16 +315,13 @@ export default function Profile() {
                   ))}
                 </div>
               ) : (
-                <EmptyState
-                  illustration={<EmptyWorkouts />}
-                  title="No workouts yet"
-                  subtitle="Complete your first session to build your history and form trend."
-                  action={
-                    <Link to="/workout" className="btn-skeu btn-skeu-primary" style={{ padding: '10px 24px', fontSize: 13 }}>
-                      <Dumbbell size={15} /> Start Workout
-                    </Link>
-                  }
-                />
+                <div className="empty-state">
+                  <Dumbbell size={42} color="var(--ink-faint)" />
+                  <p style={{ color: 'var(--ink-dim)', fontSize: 14, marginBottom: 18 }}>No workouts yet. Start your first one!</p>
+                  <Link to="/workout" className="btn-skeu btn-skeu-primary" style={{ padding: '10px 24px', fontSize: 13 }}>
+                    <Dumbbell size={15} /> Start Workout
+                  </Link>
+                </div>
               )}
             </div>
           </div>

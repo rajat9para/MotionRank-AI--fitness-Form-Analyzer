@@ -5,7 +5,9 @@ const ThemeContext = createContext();
 export function ThemeProvider({ children }) {
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem('motionrank-theme');
-    return saved === 'dark';
+    if (saved) return saved === 'dark';
+    // Default to dark mode (matches cinematic landing page)
+    return true;
   });
 
   useEffect(() => {
@@ -19,9 +21,10 @@ export function ThemeProvider({ children }) {
   }, [isDark]);
 
   const toggleTheme = () => setIsDark(prev => !prev);
+  const setTheme = (theme) => setIsDark(theme === 'dark');
 
   return (
-    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+    <ThemeContext.Provider value={{ isDark, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -34,3 +37,4 @@ export function useTheme() {
   }
   return context;
 }
+
